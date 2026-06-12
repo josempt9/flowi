@@ -10,7 +10,7 @@ import { computeCardFloat } from '@/lib/utils/float'
 import { PageHeader } from '@/components/shared/PageHeader'
 
 const inputClass =
-  'w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent'
+  'w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:ring-zinc-400'
 
 export default function TarjetasPage() {
   const { cards, loading, error, refresh } = useCards()
@@ -184,7 +184,7 @@ export default function TarjetasPage() {
                   </div>
                   <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${utilPct >= 80 ? 'bg-red-500' : 'bg-black'}`}
+                      className={`h-full rounded-full ${utilPct >= 80 ? 'bg-red-500' : 'bg-black dark:bg-white'}`}
                       style={{ width: `${utilPct}%` }}
                     />
                   </div>

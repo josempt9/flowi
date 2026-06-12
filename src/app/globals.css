@@ -149,7 +149,15 @@
 .dark .border-gray-200 { border-color: #3f3f46; }
 .dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: #27272a; }
 
+.dark .text-black { color: #fafafa; }
 .dark .hover\:text-black:hover { color: #fafafa; }
+.dark .hover\:border-black:hover { border-color: #fafafa; }
 
 /* Barra de navegación translúcida */
 .dark nav.bg-white\/90 { background-color: rgba(24, 24, 27, 0.9); }
+
+/* Controles nativos (inputs, selects, date pickers, scrollbars) heredan el
+   esquema correcto. Imprescindible para que los <select>/<input> no salgan
+   con fondo blanco en modo oscuro. */
+:root { color-scheme: light; }
+.dark { color-scheme: dark; }
