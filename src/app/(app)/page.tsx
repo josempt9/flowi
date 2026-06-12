@@ -9,11 +9,15 @@ import { typeLabel } from '@/lib/constants'
 import { formatMXN, formatMXNCompact, formatRelative } from '@/lib/utils/format'
 import { bestYieldRate, computeCardFloat, daysUntilMonthDay } from '@/lib/utils/float'
 import { displayInflow } from '@/lib/utils/transactions'
+import { OnboardingWizard } from '@/components/home/OnboardingWizard'
 
 export default function HomePage() {
-  const { accounts, loading: la } = useAccounts()
+  const { accounts, loading: la, refresh: refreshAccounts } = useAccounts()
   const { cards, loading: lc } = useCards()
-  const { transactions, loading: lt } = useTransactions(8)
+  const { transactions, loading: lt, refresh: refreshTransactions } = useTransactions(8)
+
+  // Usuario nuevo: ya cargó y no tiene ningún movimiento registrado.
+  const isNewUser = !la && !lt && transactions.length === 0
 
   const liquid = accounts.reduce((sum, a) => sum + Number(a.balance), 0)
   const debt = cards.reduce((sum, c) => sum + Number(c.current_balance), 0)
@@ -40,6 +44,16 @@ export default function HomePage() {
         </Link>
       </div>
 
+      {isNewUser ? (
+        <OnboardingWizard
+          accounts={accounts}
+          onChange={() => {
+            refreshAccounts()
+            refreshTransactions()
+          }}
+        />
+      ) : (
+      <>
       {/* Patrimonio */}
       <section className="bg-black text-white rounded-3xl p-6">
         <p className="text-sm text-gray-300">Patrimonio neto</p>
@@ -188,6 +202,8 @@ export default function HomePage() {
           </div>
         )}
       </section>
+      </>
+      )}
     </div>
   )
 }

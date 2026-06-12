@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { DATA_CHANGED_EVENT } from '@/lib/events'
 import type { CreditCard } from '@/types/finance'
 
 export function useCards() {
@@ -37,6 +38,9 @@ export function useCards() {
 
   useEffect(() => {
     refresh()
+    const handler = () => refresh()
+    window.addEventListener(DATA_CHANGED_EVENT, handler)
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, handler)
   }, [refresh])
 
   return { cards, loading, error, refresh }

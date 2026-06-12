@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { DATA_CHANGED_EVENT } from '@/lib/events'
 import type { Transaction } from '@/types/finance'
 
 export function useTransactions(limit?: number) {
@@ -41,6 +42,9 @@ export function useTransactions(limit?: number) {
 
   useEffect(() => {
     refresh()
+    const handler = () => refresh()
+    window.addEventListener(DATA_CHANGED_EVENT, handler)
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, handler)
   }, [refresh])
 
   return { transactions, loading, error, refresh }
