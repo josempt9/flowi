@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Remove-Item \"c:\\\\Users\\\\compu\\\\flowi\\\\src\\\\middleware.ts\" -Confirm:$false)",
+      "PowerShell(if \\($?\\) { \"Eliminado src/middleware.ts\" })",
+      "Skill(claude-api)",
+      "Skill(claude-api:*)",
+      "PowerShell(npx next typegen 2>&1)",
+      "PowerShell(npx tsc --noEmit 2>&1)",
+      "PowerShell(npx next build 2>&1)"
+    ]
+  }
+}
