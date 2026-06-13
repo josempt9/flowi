@@ -79,36 +79,99 @@ export function RegisterFlow({
   const [listening, setListening] = useState(false)
   const [voiceSupported, setVoiceSupported] = useState(false)
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
+  const wantListeningRef = useRef(false) // intención del usuario (vs cortes automáticos)
+  const finalTranscriptRef = useRef('') // texto final acumulado entre sesiones
 
   const supabase = createClient()
 
   useEffect(() => {
     setVoiceSupported(speechSupported())
-    return () => recognitionRef.current?.stop()
+    return () => {
+      wantListeningRef.current = false
+      recognitionRef.current?.stop()
+    }
   }, [])
 
-  const toggleVoice = () => {
-    if (listening) {
-      recognitionRef.current?.stop()
+  const launchRecognition = () => {
+    const rec = createRecognition()
+    if (!rec) {
+      wantListeningRef.current = false
+      setListening(false)
       return
     }
-    const rec = createRecognition()
-    if (!rec) return
     rec.lang = 'es-MX'
+    rec.continuous = true
     rec.interimResults = true
-    rec.continuous = false
+    rec.maxAlternatives = 1
+
     rec.onresult = (event) => {
-      let transcript = ''
-      for (let i = 0; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript
+      let interim = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i]
+        if (result.isFinal) {
+          finalTranscriptRef.current += result[0].transcript
+        } else {
+          interim += result[0].transcript
+        }
       }
-      setInput(transcript)
+      setInput((finalTranscriptRef.current + interim).trim())
     }
-    rec.onend = () => setListening(false)
-    rec.onerror = () => setListening(false)
+
+    rec.onerror = (event) => {
+      // no-speech / aborted: NO cerramos; onend reintenta solo.
+      if (event.error === 'no-speech' || event.error === 'aborted') return
+      // Errores reales (permiso denegado, etc.): cerramos.
+      wantListeningRef.current = false
+      setListening(false)
+    }
+
+    rec.onend = () => {
+      // Android Chrome corta la sesión solo; si el usuario no detuvo, reiniciamos.
+      if (wantListeningRef.current) {
+        setTimeout(() => {
+          if (wantListeningRef.current) {
+            try {
+              rec.start()
+            } catch {
+              // ya iniciado o estado inválido: ignorar
+            }
+          }
+        }, 100)
+      } else {
+        setListening(false)
+      }
+    }
+
     recognitionRef.current = rec
+    // En Android Chrome un start() inmediato a veces no engancha: pequeño delay.
+    setTimeout(() => {
+      if (wantListeningRef.current) {
+        try {
+          rec.start()
+        } catch {
+          // noop
+        }
+      }
+    }, 100)
+  }
+
+  const startVoice = () => {
+    if (!speechSupported()) return
+    wantListeningRef.current = true
+    finalTranscriptRef.current = input.trim() ? input.trim() + ' ' : ''
     setListening(true)
-    rec.start()
+    launchRecognition()
+  }
+
+  const stopVoice = () => {
+    wantListeningRef.current = false
+    setListening(false)
+    recognitionRef.current?.stop()
+  }
+
+  const toggleVoice = () => {
+    if (listening) stopVoice()
+    else startVoice()
   }
 
   const handleTicket = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -298,8 +361,17 @@ export function RegisterFlow({
                     : 'border-gray-200 text-gray-600 hover:border-black'
                 }`}
               >
-                <Mic className={`w-4 h-4 ${listening ? 'animate-pulse' : ''}`} />
-                {listening ? 'Escuchando…' : 'Dictar'}
+                {listening ? (
+                  <>
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                    Detener
+                  </>
+                ) : (
+                  <>
+                    <Mic className="w-4 h-4" />
+                    Dictar
+                  </>
+                )}
               </button>
             )}
             <label className="flex items-center justify-center gap-2 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-600 hover:border-black cursor-pointer transition-colors">

@@ -2,19 +2,42 @@
 // Soportada en Chrome (incluido Chrome Android). En navegadores sin soporte
 // los getters devuelven null/false y la UI oculta el botón de voz.
 
+export interface SpeechAlternative {
+  readonly transcript: string
+}
+
+// Numeric index signature + propiedades string-named (length/isFinal) es válido en TS.
+export interface SpeechRecognitionResultLike {
+  readonly length: number
+  readonly isFinal: boolean
+  readonly [index: number]: SpeechAlternative
+}
+
+export interface SpeechResultsLike {
+  readonly length: number
+  readonly [index: number]: SpeechRecognitionResultLike
+}
+
 export interface SpeechResultEvent {
-  results: ArrayLike<ArrayLike<{ transcript: string }>>
+  readonly resultIndex: number
+  readonly results: SpeechResultsLike
+}
+
+export interface SpeechErrorEvent {
+  readonly error: string
 }
 
 export interface SpeechRecognitionLike {
   lang: string
   interimResults: boolean
   continuous: boolean
+  maxAlternatives: number
   onresult: ((event: SpeechResultEvent) => void) | null
   onend: (() => void) | null
-  onerror: (() => void) | null
+  onerror: ((event: SpeechErrorEvent) => void) | null
   start: () => void
   stop: () => void
+  abort: () => void
 }
 
 type RecognitionCtor = new () => SpeechRecognitionLike
