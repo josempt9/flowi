@@ -1,5 +1,8 @@
 import type { MetadataRoute } from 'next'
 
+// Necesario para que el manifest se genere como archivo estático en output: export.
+export const dynamic = 'force-static'
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Flowi — Inteligencia financiera personal',

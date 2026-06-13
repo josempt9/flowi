@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { GoogleButton } from '@/components/auth/GoogleButton'
 
 export default function SignupPage() {
   const [name, setName] = useState('')
@@ -107,6 +108,15 @@ export default function SignupPage() {
             {loading ? 'Creando cuenta...' : 'Crear cuenta'}
           </button>
         </div>
+
+        {/* Separador */}
+        <div className="flex items-center gap-3 my-5">
+          <div className="flex-1 h-px bg-gray-200" />
+          <span className="text-xs text-gray-400">o</span>
+          <div className="flex-1 h-px bg-gray-200" />
+        </div>
+
+        <GoogleButton />
 
         {/* Footer */}
         <p className="text-center text-sm text-gray-500 mt-6">

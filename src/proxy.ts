@@ -32,9 +32,11 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const isAuthRoute = pathname === '/login' || pathname === '/signup'
   const isApi = pathname.startsWith('/api')
+  // El callback de OAuth corre ANTES de que exista la sesión: debe ser público.
+  const isOAuthCallback = pathname.startsWith('/auth')
 
-  // Sin sesión: todas las rutas de la app exigen login (excepto auth y API).
-  if (!user && !isAuthRoute && !isApi) {
+  // Sin sesión: todas las rutas de la app exigen login (excepto auth, callback y API).
+  if (!user && !isAuthRoute && !isApi && !isOAuthCallback) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

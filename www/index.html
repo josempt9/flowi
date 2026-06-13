@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#000000" />
+    <title>Flowi</title>
+    <style>
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: #000;
+        color: #fff;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      .center {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+      }
+      .logo {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        background: #fff;
+        color: #000;
+        font-weight: 700;
+        font-size: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      p { opacity: 0.7; font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <!-- Pantalla de carga / fallback. El APK normalmente carga el sitio
+         remoto definido en capacitor.config.ts (server.url). Esta pantalla
+         solo se ve mientras carga o si no hay conexión. -->
+    <div class="center">
+      <div class="logo">F</div>
+      <p>Cargando Flowi…</p>
+    </div>
+  </body>
+</html>

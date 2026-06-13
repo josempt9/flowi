@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Flowi</string>
+    <string name="title_activity_main">Flowi</string>
+    <string name="package_name">com.flowi.app</string>
+    <string name="custom_url_scheme">com.flowi.app</string>
+</resources>
