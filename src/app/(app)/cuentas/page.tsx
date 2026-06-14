@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { ArrowLeftRight, Check, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAccounts } from '@/hooks/useAccounts'
+import { useSubaccounts } from '@/hooks/useSubaccounts'
 import {
   ACCOUNT_TYPE_OPTIONS,
   INITIAL_ACCOUNTS,
@@ -15,6 +16,9 @@ import { createTransfer } from '@/lib/services/transfers'
 import { showToast } from '@/lib/toast'
 import { ErrorState } from '@/components/shared/ErrorState'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { ColorPicker } from '@/components/shared/ColorPicker'
+import { CurrencyInput } from '@/components/shared/CurrencyInput'
+import { SubaccountSection } from '@/components/cuentas/SubaccountSection'
 import type { Account, AccountType } from '@/types/finance'
 
 // Tokens semánticos (shadcn): adaptan claro/oscuro sin overrides.
@@ -23,6 +27,7 @@ const inputClass =
 
 export default function CuentasPage() {
   const { accounts, loading, error, refresh } = useAccounts()
+  const { subaccounts, refresh: refreshSubs } = useSubaccounts()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
@@ -183,11 +188,9 @@ export default function CuentasPage() {
               <div className="mt-3 flex items-end justify-between">
                 {editingId === a.id ? (
                   <div className="flex items-center gap-2 w-full">
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
+                    <CurrencyInput
+                      value={parseFloat(editValue) || 0}
+                      onChange={(n) => setEditValue(String(n))}
                       className={inputClass}
                       autoFocus
                     />
@@ -224,6 +227,17 @@ export default function CuentasPage() {
                   </>
                 )}
               </div>
+
+              {a.supports_subaccounts && (
+                <SubaccountSection
+                  account={a}
+                  subaccounts={subaccounts.filter((s) => s.account_id === a.id)}
+                  onChange={() => {
+                    refresh()
+                    refreshSubs()
+                  }}
+                />
+              )}
             </div>
           ))}
         </div>
@@ -338,11 +352,9 @@ function TransferModal({
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="block text-xs text-muted-foreground mb-1">Monto</label>
-              <input
-                type="number"
-                step="0.01"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+              <CurrencyInput
+                value={parseFloat(amount) || 0}
+                onChange={(n) => setAmount(String(n))}
                 placeholder="0.00"
                 className={inputClass}
               />
@@ -381,6 +393,7 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
   const [balance, setBalance] = useState('')
   const [yieldRate, setYieldRate] = useState('')
   const [institution, setInstitution] = useState('')
+  const [color, setColor] = useState('#6366F1')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const supabase = createClient()
@@ -404,7 +417,8 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
       balance: parseFloat(balance) || 0,
       yield_rate: parseFloat(yieldRate) / 100 || 0,
       institution: institution.trim() || null,
-      color: '#000000',
+      color,
+      supports_subaccounts: type === 'savings' || type === 'investment',
     })
     if (error) {
       setError(error.message)
@@ -430,10 +444,9 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
         ))}
       </select>
       <div className="flex gap-3">
-        <input
-          type="number"
-          value={balance}
-          onChange={(e) => setBalance(e.target.value)}
+        <CurrencyInput
+          value={parseFloat(balance) || 0}
+          onChange={(n) => setBalance(String(n))}
           placeholder="Saldo inicial"
           className={inputClass}
         />
@@ -451,6 +464,10 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
         placeholder="Institución (opcional)"
         className={inputClass}
       />
+      <div>
+        <label className="block text-xs text-muted-foreground mb-2">Color</label>
+        <ColorPicker value={color} onChange={setColor} />
+      </div>
       {error && <p className="text-red-500 text-sm">{error}</p>}
       <button
         onClick={submit}

@@ -20,7 +20,24 @@ export interface Account {
   institution: string | null
   color: string | null
   is_active: boolean
+  supports_subaccounts: boolean
   last_updated: string
+  created_at: string
+}
+
+export interface Subaccount {
+  id: string
+  user_id: string
+  account_id: string
+  name: string
+  balance: number
+  yield_rate: number
+  effective_yield: number
+  goal_amount: number | null
+  goal_name: string | null
+  color: string | null
+  icon: string | null
+  is_active: boolean
   created_at: string
 }
 
@@ -77,5 +94,28 @@ export interface Category {
   color: string | null
   is_essential: boolean
   parent_id: string | null
+  is_hidden: boolean
+  sort_order: number
+  created_at: string
+}
+
+export type RecurringFrequency = 'monthly' | 'biweekly' | 'weekly' | 'custom'
+
+export interface RecurringItem {
+  id: string
+  user_id: string
+  name: string
+  amount: number
+  type: 'expense' | 'income'
+  category_id: string | null
+  account_id: string | null
+  card_id: string | null
+  frequency: RecurringFrequency
+  day_of_month: number[] | null
+  day_of_week: number | null
+  is_active: boolean
+  next_date: string | null
+  last_triggered: string | null
+  notes: string | null
   created_at: string
 }

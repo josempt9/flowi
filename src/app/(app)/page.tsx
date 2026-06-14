@@ -6,18 +6,24 @@ import { useAccounts } from '@/hooks/useAccounts'
 import { useCards } from '@/hooks/useCards'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useBudgets } from '@/hooks/useBudgets'
+import { useSubaccounts } from '@/hooks/useSubaccounts'
+import { useRecurring } from '@/hooks/useRecurring'
 import { typeLabel } from '@/lib/constants'
 import { formatMXN, formatMXNCompact, formatRelative } from '@/lib/utils/format'
 import { bestYieldRate, computeCardFloat, daysUntilMonthDay } from '@/lib/utils/float'
 import { displayInflow } from '@/lib/utils/transactions'
+import { nextOccurrenceDate, daysUntilDate } from '@/lib/utils/recurringItems'
 import { OnboardingWizard } from '@/components/home/OnboardingWizard'
 import { WeeklySummaryBanner } from '@/components/home/WeeklySummaryBanner'
+import type { RecurringItem } from '@/types/finance'
 
 export default function HomePage() {
   const { accounts, loading: la, refresh: refreshAccounts } = useAccounts()
   const { cards, loading: lc } = useCards()
   const { transactions, loading: lt, refresh: refreshTransactions } = useTransactions(50)
   const { budgets } = useBudgets()
+  const { subaccounts } = useSubaccounts()
+  const { items: recurringItems } = useRecurring()
 
   // Usuario nuevo: ya cargó y no tiene ningún movimiento registrado.
   const isNewUser = !la && !lt && transactions.length === 0
@@ -29,10 +35,10 @@ export default function HomePage() {
   const net = liquid - debt
 
   const floatBenefit = cards.reduce(
-    (sum, c) => sum + computeCardFloat(c, accounts).benefit,
+    (sum, c) => sum + computeCardFloat(c, accounts, subaccounts).benefit,
     0
   )
-  const yieldRate = bestYieldRate(accounts)
+  const yieldRate = bestYieldRate(accounts, subaccounts)
 
   const paymentReminders = cards.filter((c) => {
     const d = daysUntilMonthDay(c.payment_day)
@@ -54,6 +60,12 @@ export default function HomePage() {
     .map((b) => ({ cat: b.category, pct: (monthSpend.get(b.category) ?? 0) / Number(b.amount) }))
     .filter((x) => x.pct >= 0.8)
     .sort((a, b) => b.pct - a.pct)
+
+  // Próximos compromisos recurrentes (siguientes 7 días)
+  const upcoming = recurringItems
+    .map((i) => ({ item: i, date: nextOccurrenceDate(i) }))
+    .filter((x): x is { item: RecurringItem; date: Date } => x.date !== null && daysUntilDate(x.date) <= 7)
+    .sort((a, b) => a.date.getTime() - b.date.getTime())
 
   return (
     <div className="max-w-md mx-auto px-4 pt-10 pb-28">
@@ -153,6 +165,29 @@ export default function HomePage() {
           </p>
         </Link>
       ))}
+
+      {/* Próximos compromisos (recurrentes a 7 días) */}
+      {upcoming.length > 0 && (
+        <Link
+          href="/recurrentes"
+          className="mt-3 block bg-white border border-gray-100 rounded-2xl p-4 shadow-sm"
+        >
+          <p className="text-sm font-semibold text-gray-900 mb-1">Próximos compromisos</p>
+          <div className="space-y-1">
+            {upcoming.slice(0, 4).map(({ item, date }) => {
+              const d = daysUntilDate(date)
+              return (
+                <p key={item.id} className="text-sm text-gray-600">
+                  {d === 0 ? 'Hoy' : `En ${d} día${d === 1 ? '' : 's'}`}:{' '}
+                  <span className="font-medium text-gray-900">{item.name}</span>{' '}
+                  {item.type === 'income' ? '+' : ''}
+                  {formatMXN(Number(item.amount))}
+                </p>
+              )
+            })}
+          </div>
+        </Link>
+      )}
 
       {/* Cuentas */}
       <section className="mt-6">

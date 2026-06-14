@@ -7,6 +7,7 @@ import { QuickRegisterSheet } from '@/components/registro/QuickRegisterSheet'
 import { OPEN_REGISTER_EVENT } from '@/lib/events'
 import {
   BarChart3,
+  CalendarClock,
   CreditCard,
   History,
   Home,
@@ -25,7 +26,7 @@ const LEFT = [
 ]
 
 const RIGHT = [
-  { href: '/tarjetas', label: 'Tarjetas', icon: CreditCard },
+  { href: '/tarjetas', label: 'TDC', icon: CreditCard },
   { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
 ]
 
@@ -33,6 +34,7 @@ const MORE = [
   { href: '/historial', label: 'Historial', icon: History },
   { href: '/presupuestos', label: 'Presupuestos', icon: PiggyBank },
   { href: '/proyecciones', label: 'Proyecciones', icon: TrendingUp },
+  { href: '/recurrentes', label: 'Recurrentes', icon: CalendarClock },
   { href: '/ajustes', label: 'Ajustes', icon: Settings },
 ]
 

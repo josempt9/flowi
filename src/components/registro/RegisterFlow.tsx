@@ -5,11 +5,15 @@ import { Camera, Mic, Sparkles } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useCards } from '@/hooks/useCards'
 import { useAccounts } from '@/hooks/useAccounts'
+import { useCategories } from '@/hooks/useCategories'
+import { useRecurring } from '@/hooks/useRecurring'
+import { nextOccurrenceDate, daysUntilDate } from '@/lib/utils/recurringItems'
 import { signedAmount } from '@/lib/utils/transactions'
 import { recommendCardForExpense } from '@/lib/utils/float'
 import { formatMXN } from '@/lib/utils/format'
 import { createRecognition, speechSupported, type SpeechRecognitionLike } from '@/lib/speech'
 import { showToast } from '@/lib/toast'
+import { CurrencyInput } from '@/components/shared/CurrencyInput'
 import type { TransactionType } from '@/types/finance'
 
 const ACCOUNTS = ['Mercado Pago', 'Santander débito', 'Efectivo'] as const
@@ -21,19 +25,6 @@ const TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: 'withdrawal', label: 'Retiro' },
   { value: 'card_payment', label: 'Pago de tarjeta' },
   { value: 'deposit', label: 'Depósito' },
-]
-
-const CATEGORIES = [
-  'Alimentación',
-  'Transporte',
-  'Hogar',
-  'Salud',
-  'Entretenimiento',
-  'Ropa',
-  'Educación',
-  'Nómina',
-  'Servicios',
-  'General',
 ]
 
 type ParsedTransaction = {
@@ -86,6 +77,8 @@ export function RegisterFlow({
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const { cards } = useCards()
   const { accounts: floatAccounts } = useAccounts()
+  const { names: categoryNames, visible: categoryList } = useCategories()
+  const { items: recurringItems } = useRecurring()
   const wantListeningRef = useRef(false) // intención del usuario (vs cortes automáticos)
   const finalTranscriptRef = useRef('') // texto final acumulado entre sesiones
 
@@ -222,7 +215,7 @@ export function RegisterFlow({
       const res = await fetch('/api/parse-transaction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input, accounts: ACCOUNTS, aliases: [] }),
+        body: JSON.stringify({ input, accounts: ACCOUNTS, aliases: [], categories: categoryNames }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -244,6 +237,32 @@ export function RegisterFlow({
     value: ParsedTransaction[K]
   ) => {
     setParsed((prev) => (prev ? { ...prev, [key]: value } : prev))
+  }
+
+  // Recurrentes que vencen hoy/mañana → chip de registro rápido.
+  const dueRecurring = recurringItems.filter((i) => {
+    const d = nextOccurrenceDate(i)
+    return d !== null && daysUntilDate(d) <= 1
+  })
+
+  const applyRecurring = (item: (typeof recurringItems)[number]) => {
+    const accName = floatAccounts.find((a) => a.id === item.account_id)?.name ?? null
+    const catName = item.category_id
+      ? categoryList.find((c) => c.id === item.category_id)?.name ?? 'General'
+      : 'General'
+    setInput(item.name)
+    setParsed({
+      type: item.type,
+      amount: Number(item.amount),
+      account: accName,
+      card: null,
+      category: catName,
+      description: item.name,
+      confidence: 1,
+      confidence_reason: 'Movimiento recurrente',
+    })
+    setEditing(null)
+    setStep(2)
   }
 
   const handleSave = async () => {
@@ -396,6 +415,21 @@ export function RegisterFlow({
             </label>
           </div>
 
+          {dueRecurring.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {dueRecurring.map((i) => (
+                <button
+                  key={i.id}
+                  type="button"
+                  onClick={() => applyRecurring(i)}
+                  className="px-3 py-1.5 rounded-full bg-muted border border-border text-xs font-medium text-foreground hover:border-foreground"
+                >
+                  ¿Registrar {i.name} {formatMXN(Number(i.amount))}?
+                </button>
+              ))}
+            </div>
+          )}
+
           {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
 
           <button
@@ -445,12 +479,9 @@ export function RegisterFlow({
               onEdit={() => setEditing('amount')}
               onDone={() => setEditing(null)}
             >
-              <input
-                type="number"
-                min={0}
-                step="0.01"
+              <CurrencyInput
                 value={parsed.amount}
-                onChange={(e) => updateField('amount', parseFloat(e.target.value) || 0)}
+                onChange={(n) => updateField('amount', n)}
                 className={inputClass}
               />
             </Field>
@@ -488,7 +519,7 @@ export function RegisterFlow({
                 onChange={(e) => updateField('category', e.target.value)}
                 className={inputClass}
               >
-                {CATEGORIES.map((c) => (
+                {categoryNames.map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>

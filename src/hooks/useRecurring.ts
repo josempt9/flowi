@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { DATA_CHANGED_EVENT } from '@/lib/events'
-import type { Account } from '@/types/finance'
+import type { RecurringItem } from '@/types/finance'
 
-export function useAccounts() {
-  const [accounts, setAccounts] = useState<Account[]>([])
+export function useRecurring() {
+  const [items, setItems] = useState<RecurringItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -22,9 +22,9 @@ export function useAccounts() {
       return
     }
     const { data, error } = await supabase
-      .from('accounts')
+      .from('recurring_items')
       .select(
-        'id, user_id, name, type, balance, yield_rate, institution, color, is_active, supports_subaccounts, last_updated, created_at'
+        'id, user_id, name, amount, type, category_id, account_id, card_id, frequency, day_of_month, day_of_week, is_active, next_date, last_triggered, notes, created_at'
       )
       .eq('user_id', user.id)
       .eq('is_active', true)
@@ -32,7 +32,7 @@ export function useAccounts() {
 
     if (error) setError(error.message)
     else {
-      setAccounts(data as Account[])
+      setItems(data as RecurringItem[])
       setError(null)
     }
     setLoading(false)
@@ -45,5 +45,5 @@ export function useAccounts() {
     return () => window.removeEventListener(DATA_CHANGED_EVENT, handler)
   }, [refresh])
 
-  return { accounts, loading, error, refresh }
+  return { items, loading, error, refresh }
 }

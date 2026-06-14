@@ -4,9 +4,11 @@ import { useState } from 'react'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCards } from '@/hooks/useCards'
 import { useTransactions } from '@/hooks/useTransactions'
+import { useRecurring } from '@/hooks/useRecurring'
 import { formatMXN } from '@/lib/utils/format'
 import { daysUntilMonthDay } from '@/lib/utils/float'
 import { isInflow } from '@/lib/utils/transactions'
+import { recurringNetInDays } from '@/lib/utils/recurringItems'
 import { PageHeader } from '@/components/shared/PageHeader'
 
 type Scenario = 'pesimista' | 'base' | 'optimista'
@@ -33,6 +35,7 @@ export default function ProyeccionesPage() {
   const { accounts, loading: la } = useAccounts()
   const { cards, loading: lc } = useCards()
   const { transactions, loading: lt } = useTransactions()
+  const { items: recurring } = useRecurring()
   const [scenario, setScenario] = useState<Scenario>('base')
 
   const loading = la || lc || lt
@@ -58,7 +61,9 @@ export default function ProyeccionesPage() {
   const projections = HORIZONS.map((h) => {
     const trend = monthlyNet * h.months
     const cardOut = commitmentWithin(h.months * 30)
-    return { ...h, projected: liquid + trend, afterCards: liquid + trend - cardOut, cardOut }
+    const recurNet = recurringNetInDays(recurring, h.months * 30)
+    const projected = liquid + trend
+    return { ...h, projected, recurNet, cardOut, estimate: projected + recurNet - cardOut }
   })
 
   return (
@@ -98,12 +103,23 @@ export default function ProyeccionesPage() {
                   <span className="text-sm font-semibold text-gray-900">A {p.label}</span>
                   <span className="text-lg font-bold text-gray-900">{formatMXN(p.projected)}</span>
                 </div>
-                {p.cardOut > 0 && (
-                  <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between text-xs">
-                    <span className="text-gray-400">Tras pagar tarjetas</span>
-                    <span className={p.afterCards < 0 ? 'text-red-500 font-medium' : 'text-gray-600 font-medium'}>
-                      {formatMXN(p.afterCards)}
-                    </span>
+                {(p.cardOut > 0 || p.recurNet !== 0) && (
+                  <div className="mt-2 pt-2 border-t border-gray-100 space-y-1 text-xs">
+                    {p.recurNet !== 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">Compromisos fijos</span>
+                        <span className="text-gray-600 font-medium">
+                          {p.recurNet >= 0 ? '+' : ''}
+                          {formatMXN(p.recurNet)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400">Estimado neto</span>
+                      <span className={p.estimate < 0 ? 'text-red-500 font-medium' : 'text-gray-600 font-medium'}>
+                        {formatMXN(p.estimate)}
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>

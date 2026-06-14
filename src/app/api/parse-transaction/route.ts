@@ -30,22 +30,27 @@ const CATEGORIES = [
   'General',
 ] as const
 
-const TransactionSchema = z.object({
-  type: z.enum(TRANSACTION_TYPES),
-  amount: z.number(),
-  account: z.string().nullable(),
-  card: z.string().nullable(),
-  category: z.enum(CATEGORIES),
-  description: z.string(),
-  confidence: z.number(),
-  confidence_reason: z.string(),
-})
+// El esquema y el prompt se construyen por petición para incluir las
+// categorías del usuario (Sprint C5). Si no se envían, se usa la lista default.
+function buildTransactionSchema(categories: string[]) {
+  return z.object({
+    type: z.enum(TRANSACTION_TYPES),
+    amount: z.number(),
+    account: z.string().nullable(),
+    card: z.string().nullable(),
+    category: z.enum(categories as [string, ...string[]]),
+    description: z.string(),
+    confidence: z.number(),
+    confidence_reason: z.string(),
+  })
+}
 
-const SYSTEM_PROMPT = `Eres un parser de transacciones financieras para un usuario mexicano.
+function buildSystemPrompt(categories: string[]): string {
+  return `Eres un parser de transacciones financieras para un usuario mexicano.
 Tu tarea es interpretar texto libre y extraer datos estructurados de una transacción.
 
 Tipos válidos (campo "type"): expense, income, transfer, withdrawal, card_payment, deposit.
-Categorías válidas (campo "category"): Alimentación, Transporte, Hogar, Salud, Entretenimiento, Ropa, Educación, Nómina, Servicios, General.
+Categorías válidas (campo "category"): ${categories.join(', ')}.
 
 Reglas de interpretación:
 - Si el texto menciona nómina, sueldo o ingreso → type: "income".
@@ -61,6 +66,7 @@ Reglas de interpretación:
 - "confidence_reason" explica brevemente por qué asignaste ese nivel de confianza.
 - Usa confidence < 0.7 si la cuenta o tarjeta no están claras.
 - Usa confidence < 0.5 si el monto no aparece explícito en el texto.`
+}
 
 export async function POST(request: Request) {
   if (!checkRateLimit(getClientIp(request))) {
@@ -80,10 +86,11 @@ export async function POST(request: Request) {
     )
   }
 
-  const { input, accounts, aliases } = (body ?? {}) as {
+  const { input, accounts, aliases, categories } = (body ?? {}) as {
     input?: unknown
     accounts?: unknown
     aliases?: unknown
+    categories?: unknown
   }
 
   if (typeof input !== 'string' || input.trim() === '') {
@@ -103,13 +110,20 @@ export async function POST(request: Request) {
   const accountsContext = JSON.stringify(accounts ?? [])
   const aliasesContext = JSON.stringify(aliases ?? [])
 
+  const requestedCats = Array.isArray(categories)
+    ? (categories as unknown[]).filter(
+        (c): c is string => typeof c === 'string' && c.trim() !== ''
+      )
+    : []
+  const cats = requestedCats.length ? requestedCats : [...CATEGORIES]
+
   try {
     const message = await anthropic.messages.parse({
       model: 'claude-haiku-4-5',
       max_tokens: 1024,
-      system: SYSTEM_PROMPT,
+      system: buildSystemPrompt(cats),
       output_config: {
-        format: zodOutputFormat(TransactionSchema),
+        format: zodOutputFormat(buildTransactionSchema(cats)),
       },
       messages: [
         {

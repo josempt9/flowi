@@ -5,13 +5,14 @@ import { AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useBudgets } from '@/hooks/useBudgets'
 import { useTransactions } from '@/hooks/useTransactions'
-import { CATEGORIES } from '@/lib/constants'
+import { useCategories } from '@/hooks/useCategories'
 import { formatMXN } from '@/lib/utils/format'
 import { isInflow } from '@/lib/utils/transactions'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { CurrencyInput } from '@/components/shared/CurrencyInput'
 
 const inputClass =
-  'w-28 px-3 py-2 rounded-xl border border-gray-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent'
+  'w-full px-3 py-2 rounded-xl border border-gray-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-100 dark:focus:ring-zinc-400'
 
 function inCurrentMonth(dateStr: string): boolean {
   const d = new Date(dateStr)
@@ -22,6 +23,7 @@ function inCurrentMonth(dateStr: string): boolean {
 export default function PresupuestosPage() {
   const { budgets, loading: lb, refresh } = useBudgets()
   const { transactions, loading: lt } = useTransactions()
+  const { names: categoryNames } = useCategories()
   const [amounts, setAmounts] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -56,7 +58,7 @@ export default function PresupuestosPage() {
       setBusy(false)
       return
     }
-    const rows = CATEGORIES.map((cat) => ({
+    const rows = categoryNames.map((cat) => ({
       user_id: user.id,
       category: cat,
       amount: parseFloat(amounts[cat] ?? '0') || 0,
@@ -96,7 +98,7 @@ export default function PresupuestosPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {CATEGORIES.map((cat) => {
+          {categoryNames.map((cat) => {
             const budget = parseFloat(amounts[cat] ?? '0') || 0
             const spent = spentByCategory.get(cat) ?? 0
             const pct = budget > 0 ? spent / budget : 0
@@ -106,17 +108,13 @@ export default function PresupuestosPage() {
               <div key={cat} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-sm font-medium text-gray-900">{cat}</span>
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-gray-400">$</span>
-                    <input
-                      type="number"
-                      step="1"
-                      value={amounts[cat] ?? ''}
-                      onChange={(e) => setAmounts((a) => ({ ...a, [cat]: e.target.value }))}
-                      placeholder="0"
-                      className={inputClass}
-                    />
-                  </div>
+                  <CurrencyInput
+                    value={parseFloat(amounts[cat] ?? '0') || 0}
+                    onChange={(n) => setAmounts((a) => ({ ...a, [cat]: String(n) }))}
+                    placeholder="0"
+                    className={inputClass}
+                    wrapperClassName="relative w-36 shrink-0"
+                  />
                 </div>
 
                 {budget > 0 && (

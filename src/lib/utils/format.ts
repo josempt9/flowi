@@ -36,3 +36,12 @@ export function formatShortDate(date: string | Date): string {
 export function formatRelative(date: string | Date): string {
   return formatDistanceToNow(new Date(date), { addSuffix: true, locale: es })
 }
+
+/** Próxima ocurrencia de un día del mes como fecha legible, p. ej. "13 de julio 2026". */
+export function formatNextMonthDay(day: number): string {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  let target = new Date(today.getFullYear(), today.getMonth(), day)
+  if (target < today) target = new Date(today.getFullYear(), today.getMonth() + 1, day)
+  return format(target, "d 'de' MMMM yyyy", { locale: es })
+}

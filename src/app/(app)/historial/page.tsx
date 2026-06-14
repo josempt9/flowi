@@ -5,7 +5,8 @@ import { ArrowDownLeft, ArrowUpRight, Download, Receipt, Search, SearchX, Slider
 import { createClient } from '@/lib/supabase/client'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useTransactions } from '@/hooks/useTransactions'
-import { CATEGORIES, TYPE_OPTIONS, typeLabel } from '@/lib/constants'
+import { TYPE_OPTIONS, typeLabel } from '@/lib/constants'
+import { useCategories } from '@/hooks/useCategories'
 import { formatMXN, formatShortDate } from '@/lib/utils/format'
 import { displayInflow } from '@/lib/utils/transactions'
 import { reconcileEdit, reverseFromBalance } from '@/lib/services/balances'
@@ -26,6 +27,7 @@ const inputClass =
 export default function HistorialPage() {
   const { transactions, loading, error, refresh } = useTransactions()
   const { accounts } = useAccounts()
+  const { names: categoryNames } = useCategories()
   const [search, setSearch] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [fAccount, setFAccount] = useState('all')
@@ -137,7 +139,7 @@ export default function HistorialPage() {
           </select>
           <select value={fCategory} onChange={(e) => setFCategory(e.target.value)} className={inputClass}>
             <option value="all">Todas las categorías</option>
-            {CATEGORIES.map((c) => (
+            {categoryNames.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
@@ -229,6 +231,7 @@ export default function HistorialPage() {
         <EditModal
           tx={editing}
           accounts={accounts}
+          categoryNames={categoryNames}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null)
@@ -243,11 +246,13 @@ export default function HistorialPage() {
 function EditModal({
   tx,
   accounts,
+  categoryNames,
   onClose,
   onSaved,
 }: {
   tx: Transaction
   accounts: Account[]
+  categoryNames: string[]
   onClose: () => void
   onSaved: () => void
 }) {
@@ -378,7 +383,7 @@ function EditModal({
           <div className="flex gap-3">
             <Field label="Categoría" className="flex-1">
               <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputClass}>
-                {CATEGORIES.map((c) => (
+                {categoryNames.map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>
