@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCards } from '@/hooks/useCards'
 import { useSubaccounts } from '@/hooks/useSubaccounts'
-import { formatMXN, formatPercent, formatNextMonthDay } from '@/lib/utils/format'
+import { formatMXN, formatPercent } from '@/lib/utils/format'
 import { bestYieldRate, computeCardFloat, daysUntilMonthDay, paymentDayFromCut } from '@/lib/utils/float'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -362,23 +362,13 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
       />
 
       <div>
-        <label className="block text-xs text-muted-foreground mb-1">
+        <label className="block text-xs text-muted-foreground mb-2">
           ¿Qué día del mes es tu fecha de corte?
         </label>
-        <input
-          type="number"
-          min={1}
-          max={31}
-          value={cutDay}
-          onChange={(e) => setCutDay(e.target.value)}
-          placeholder="Día de corte (1-31)"
-          className={inputClass}
+        <DayGrid
+          value={cutDay ? parseInt(cutDay) : null}
+          onChange={(d) => setCutDay(String(d))}
         />
-        {cutDay && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Próximo corte: {formatNextMonthDay(parseInt(cutDay))}
-          </p>
-        )}
       </div>
 
       <div>
@@ -395,31 +385,21 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
       </div>
 
       <div>
-        <label className="block text-xs text-muted-foreground mb-1">
+        <label className="block text-xs text-muted-foreground mb-2">
           Día límite de pago (se calcula solo, editable)
         </label>
-        <input
-          type="number"
-          min={1}
-          max={31}
-          value={paymentDay}
-          onChange={(e) => setPaymentDay(e.target.value)}
-          placeholder="Día de pago"
-          className={inputClass}
+        <DayGrid
+          value={paymentDay ? parseInt(paymentDay) : null}
+          onChange={(d) => setPaymentDay(String(d))}
         />
-        {cutDay && graceDays && paymentDay && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Fecha límite de pago: día {paymentDay} de cada mes
-          </p>
-        )}
       </div>
 
       {cutDay && paymentDay && (
-        <div className="flex items-center justify-between bg-muted rounded-xl p-3 text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">Corte día {cutDay}</span>
-          <span>───────</span>
-          <span className="font-medium text-foreground">Pago día {paymentDay}</span>
-        </div>
+        <p className="bg-muted rounded-xl p-3 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">Corte: día {cutDay} de cada mes</span> ·{' '}
+          <span className="font-medium text-foreground">Pago límite: día {paymentDay} de cada mes</span>
+          {graceDays ? ` · ${graceDays} días de gracia` : ''}
+        </p>
       )}
 
       <div className="flex gap-3">
@@ -460,6 +440,28 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
       >
         {busy ? 'Guardando…' : 'Guardar tarjeta'}
       </button>
+    </div>
+  )
+}
+
+// Selector visual de día del mes (1-31), single-select.
+function DayGrid({ value, onChange }: { value: number | null; onChange: (day: number) => void }) {
+  return (
+    <div className="grid grid-cols-7 gap-1">
+      {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+        <button
+          key={d}
+          type="button"
+          onClick={() => onChange(d)}
+          className={`py-1.5 rounded-lg text-xs font-medium ${
+            value === d
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted text-muted-foreground'
+          }`}
+        >
+          {d}
+        </button>
+      ))}
     </div>
   )
 }
