@@ -3,7 +3,8 @@
     "allow": [
       "PowerShell(npx cap add android 2>&1)",
       "PowerShell(npm run build:apk 2>&1)",
-      "PowerShell(npm run build 2>&1)"
+      "PowerShell(npm run build 2>&1)",
+      "PowerShell(npm install @aparajita/capacitor-biometric-auth 2>&1)"
     ]
   }
 }
