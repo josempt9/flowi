@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -62,6 +63,13 @@ Reglas de interpretación:
 - Usa confidence < 0.5 si el monto no aparece explícito en el texto.`
 
 export async function POST(request: Request) {
+  if (!checkRateLimit(getClientIp(request))) {
+    return NextResponse.json(
+      { error: 'Demasiadas solicitudes. Espera un minuto e intenta de nuevo.' },
+      { status: 429 }
+    )
+  }
+
   let body: unknown
   try {
     body = await request.json()

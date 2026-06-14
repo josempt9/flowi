@@ -1,10 +1,15 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Camera, Mic } from 'lucide-react'
+import { Camera, Mic, Sparkles } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useCards } from '@/hooks/useCards'
+import { useAccounts } from '@/hooks/useAccounts'
 import { signedAmount } from '@/lib/utils/transactions'
+import { recommendCardForExpense } from '@/lib/utils/float'
+import { formatMXN } from '@/lib/utils/format'
 import { createRecognition, speechSupported, type SpeechRecognitionLike } from '@/lib/speech'
+import { showToast } from '@/lib/toast'
 import type { TransactionType } from '@/types/finance'
 
 const ACCOUNTS = ['Mercado Pago', 'Santander débito', 'Efectivo'] as const
@@ -79,6 +84,8 @@ export function RegisterFlow({
   const [listening, setListening] = useState(false)
   const [voiceSupported, setVoiceSupported] = useState(false)
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
+  const { cards } = useCards()
+  const { accounts: floatAccounts } = useAccounts()
   const wantListeningRef = useRef(false) // intención del usuario (vs cortes automáticos)
   const finalTranscriptRef = useRef('') // texto final acumulado entre sesiones
 
@@ -301,6 +308,7 @@ export function RegisterFlow({
 
       setSaved(parsed)
       setStep(3)
+      showToast('Movimiento guardado')
       onSaved?.()
     } catch {
       setError('Error inesperado al guardar la transacción.')
@@ -490,6 +498,23 @@ export function RegisterFlow({
           </div>
 
           {error && <p className="text-red-500 text-sm mt-4">{error}</p>}
+
+          {parsed.type === 'expense' &&
+            parsed.amount > 200 &&
+            (() => {
+              const rec = recommendCardForExpense(parsed.amount, cards, floatAccounts)
+              if (!rec || rec.benefit <= 0) return null
+              return (
+                <div className="mt-4 flex items-start gap-2 bg-gray-50 rounded-xl p-3 text-xs text-gray-600">
+                  <Sparkles className="w-4 h-4 text-black shrink-0 mt-0.5" />
+                  <span>
+                    Para esta compra, usa{' '}
+                    <span className="font-semibold text-gray-900">{rec.card.name}</span> — ~
+                    {rec.days} días hasta el pago, generarías {formatMXN(rec.benefit)} de float.
+                  </span>
+                </div>
+              )
+            })()}
 
           <button
             onClick={handleSave}

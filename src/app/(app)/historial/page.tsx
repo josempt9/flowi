@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { ArrowDownLeft, ArrowUpRight, Download, Search, SlidersHorizontal, Trash2, X } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Download, Receipt, Search, SearchX, SlidersHorizontal, Trash2, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useTransactions } from '@/hooks/useTransactions'
@@ -11,14 +11,20 @@ import { displayInflow } from '@/lib/utils/transactions'
 import { reconcileEdit, reverseFromBalance } from '@/lib/services/balances'
 import { deleteTransfer } from '@/lib/services/transfers'
 import { exportTransactionsToXlsx } from '@/lib/services/export'
+import { openRegisterSheet } from '@/lib/events'
+import { showToast } from '@/lib/toast'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { ErrorState } from '@/components/shared/ErrorState'
+import { SkeletonList } from '@/components/shared/Skeleton'
 import type { Account, Transaction, TransactionType } from '@/types/finance'
 
+// Clases con tokens semánticos (shadcn): adaptan claro/oscuro sin overrides.
 const inputClass =
-  'w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent'
+  'w-full px-4 py-3 rounded-xl border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent'
 
 export default function HistorialPage() {
-  const { transactions, loading, refresh } = useTransactions()
+  const { transactions, loading, error, refresh } = useTransactions()
   const { accounts } = useAccounts()
   const [search, setSearch] = useState('')
   const [showFilters, setShowFilters] = useState(false)
@@ -82,7 +88,7 @@ export default function HistorialPage() {
               exportTransactionsToXlsx(filtered, accountName, `flowi-movimientos${range}.xlsx`)
             }}
             disabled={filtered.length === 0}
-            className="inline-flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-black disabled:opacity-40"
+            className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-40"
           >
             <Download className="w-4 h-4" /> Excel
           </button>
@@ -92,7 +98,7 @@ export default function HistorialPage() {
       {/* Buscador */}
       <div className="flex gap-2 mb-3">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -103,13 +109,15 @@ export default function HistorialPage() {
         <button
           onClick={() => setShowFilters((v) => !v)}
           className={`relative px-3 rounded-xl border text-sm shrink-0 ${
-            activeFilters ? 'border-black bg-black text-white' : 'border-gray-200 text-gray-600'
+            activeFilters
+              ? 'border-primary bg-primary text-primary-foreground'
+              : 'border-border text-muted-foreground'
           }`}
           aria-label="Filtros"
         >
           <SlidersHorizontal className="w-4 h-4" />
           {activeFilters > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 bg-white text-black text-[10px] font-bold w-4 h-4 rounded-full border border-black flex items-center justify-center">
+            <span className="absolute -top-1.5 -right-1.5 bg-card text-foreground text-[10px] font-bold w-4 h-4 rounded-full border border-border flex items-center justify-center">
               {activeFilters}
             </span>
           )}
@@ -118,7 +126,7 @@ export default function HistorialPage() {
 
       {/* Panel de filtros */}
       {showFilters && (
-        <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm mb-4 space-y-3">
+        <div className="bg-card border border-border rounded-2xl p-4 shadow-sm mb-4 space-y-3">
           <select value={fAccount} onChange={(e) => setFAccount(e.target.value)} className={inputClass}>
             <option value="all">Todas las cuentas</option>
             {accounts.map((a) => (
@@ -145,16 +153,16 @@ export default function HistorialPage() {
           </select>
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-xs text-gray-400 mb-1">Desde</label>
+              <label className="block text-xs text-muted-foreground mb-1">Desde</label>
               <input type="date" value={fFrom} onChange={(e) => setFFrom(e.target.value)} className={inputClass} />
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-gray-400 mb-1">Hasta</label>
+              <label className="block text-xs text-muted-foreground mb-1">Hasta</label>
               <input type="date" value={fTo} onChange={(e) => setFTo(e.target.value)} className={inputClass} />
             </div>
           </div>
           {activeFilters > 0 && (
-            <button onClick={clearFilters} className="text-sm text-gray-500 hover:text-black">
+            <button onClick={clearFilters} className="text-sm text-muted-foreground hover:text-foreground">
               Limpiar filtros
             </button>
           )}
@@ -163,45 +171,51 @@ export default function HistorialPage() {
 
       {/* Lista */}
       {loading ? (
-        <div className="space-y-2">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-16 bg-white border border-gray-100 rounded-2xl animate-pulse" />
-          ))}
-        </div>
+        <SkeletonList rows={5} />
+      ) : error ? (
+        <ErrorState message="No pudimos cargar tus movimientos." retry={refresh} />
       ) : filtered.length === 0 ? (
-        <div className="bg-white border border-dashed border-gray-200 rounded-2xl p-8 text-center">
-          <p className="text-sm text-gray-500">
-            {transactions.length === 0
-              ? 'Aún no tienes movimientos.'
-              : 'Ningún movimiento coincide con los filtros.'}
-          </p>
-        </div>
+        transactions.length === 0 ? (
+          <EmptyState
+            icon={Receipt}
+            title="Aún no hay movimientos"
+            message="Registra tu primero y aquí verás todo tu historial."
+            ctaLabel="Registrar movimiento"
+            onAction={openRegisterSheet}
+          />
+        ) : (
+          <EmptyState
+            icon={SearchX}
+            title="Sin resultados"
+            message="Ningún movimiento coincide con los filtros."
+          />
+        )
       ) : (
-        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm divide-y divide-gray-100">
+        <div className="bg-card border border-border rounded-2xl shadow-sm divide-y divide-border">
           {filtered.map((t) => {
             const inflow = displayInflow(t)
             return (
               <button
                 key={t.id}
                 onClick={() => setEditing(t)}
-                className="w-full flex items-center gap-3 p-4 text-left hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted transition-colors"
               >
-                <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
                   {inflow ? (
-                    <ArrowDownLeft className="w-4 h-4 text-black" />
+                    <ArrowDownLeft className="w-4 h-4 text-foreground" />
                   ) : (
-                    <ArrowUpRight className="w-4 h-4 text-black" />
+                    <ArrowUpRight className="w-4 h-4 text-foreground" />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-900 truncate">
+                  <p className="text-sm font-medium text-foreground truncate">
                     {t.description || t.ai_category || typeLabel(t.type)}
                   </p>
-                  <p className="text-xs text-gray-400 truncate">
+                  <p className="text-xs text-muted-foreground truncate">
                     {typeLabel(t.type)} · {accountName(t.account_id)} · {formatShortDate(t.date)}
                   </p>
                 </div>
-                <p className="text-sm font-semibold text-gray-900 shrink-0">
+                <p className="text-sm font-semibold text-foreground shrink-0">
                   {inflow ? '+' : '−'}
                   {formatMXN(Number(t.amount))}
                 </p>
@@ -281,6 +295,7 @@ function EditModal({
       { account_id: tx.account_id, type: tx.type, amount: Number(tx.amount) },
       { account_id: newAccountId, type, amount: newAmount }
     )
+    showToast('Cambios guardados')
     onSaved()
   }
 
@@ -294,6 +309,7 @@ function EditModal({
         setBusy(false)
         return
       }
+      showToast('Transferencia eliminada')
       onSaved()
       return
     }
@@ -304,21 +320,22 @@ function EditModal({
       return
     }
     await reverseFromBalance(supabase, tx.account_id, tx.type, Number(tx.amount))
+    showToast('Movimiento eliminado')
     onSaved()
   }
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 max-h-[90vh] overflow-y-auto">
+      <div className="bg-card w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-gray-900">Editar movimiento</h2>
-          <button onClick={onClose} aria-label="Cerrar" className="text-gray-400 hover:text-black">
+          <h2 className="text-lg font-bold text-foreground">Editar movimiento</h2>
+          <button onClick={onClose} aria-label="Cerrar" className="text-muted-foreground hover:text-foreground">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {isTransfer && (
-          <div className="bg-gray-50 rounded-xl p-4 mb-4 text-sm text-gray-600">
+          <div className="bg-muted rounded-xl p-4 mb-4 text-sm text-muted-foreground">
             Esta es una transferencia entre cuentas. Para cambiarla, elimínala y
             crea una nueva desde la pantalla de Cuentas.
           </div>
@@ -388,7 +405,7 @@ function EditModal({
           <button
             onClick={save}
             disabled={busy}
-            className="w-full bg-black text-white py-3 rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-50 mt-5"
+            className="w-full bg-primary text-primary-foreground py-3 rounded-xl text-sm font-medium hover:bg-primary/90 disabled:opacity-50 mt-5"
           >
             {busy ? 'Guardando…' : 'Guardar cambios'}
           </button>
@@ -396,18 +413,18 @@ function EditModal({
 
         {confirmingDelete ? (
           <div className="flex items-center justify-center gap-4 mt-3">
-            <span className="text-sm text-gray-600">¿Eliminar este movimiento?</span>
+            <span className="text-sm text-muted-foreground">¿Eliminar este movimiento?</span>
             <button onClick={remove} disabled={busy} className="text-sm font-medium text-red-500 hover:underline">
               Sí, eliminar
             </button>
-            <button onClick={() => setConfirmingDelete(false)} className="text-sm text-gray-400 hover:text-black">
+            <button onClick={() => setConfirmingDelete(false)} className="text-sm text-muted-foreground hover:text-foreground">
               Cancelar
             </button>
           </div>
         ) : (
           <button
             onClick={() => setConfirmingDelete(true)}
-            className="w-full flex items-center justify-center gap-2 text-red-500 py-3 rounded-xl text-sm font-medium hover:bg-red-50 mt-1"
+            className="w-full flex items-center justify-center gap-2 text-red-500 py-3 rounded-xl text-sm font-medium hover:bg-red-50 dark:hover:bg-red-950 mt-1"
           >
             <Trash2 className="w-4 h-4" /> Eliminar movimiento
           </button>
@@ -428,7 +445,7 @@ function Field({
 }) {
   return (
     <div className={className}>
-      <label className="block text-xs text-gray-400 mb-1">{label}</label>
+      <label className="block text-xs text-muted-foreground mb-1">{label}</label>
       {children}
     </div>
   )

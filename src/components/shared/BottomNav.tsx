@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { QuickRegisterSheet } from '@/components/registro/QuickRegisterSheet'
+import { OPEN_REGISTER_EVENT } from '@/lib/events'
 import {
   BarChart3,
   CreditCard,
@@ -39,6 +40,13 @@ export function BottomNav() {
   const pathname = usePathname()
   const [moreOpen, setMoreOpen] = useState(false)
   const [registerOpen, setRegisterOpen] = useState(false)
+
+  // Permite abrir el sheet de registro desde cualquier pantalla (estados vacíos).
+  useEffect(() => {
+    const open = () => setRegisterOpen(true)
+    window.addEventListener(OPEN_REGISTER_EVENT, open)
+    return () => window.removeEventListener(OPEN_REGISTER_EVENT, open)
+  }, [])
 
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href)

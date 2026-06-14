@@ -82,10 +82,16 @@ export default function PresupuestosPage() {
 
       {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
+      {!lb && budgets.length === 0 && (
+        <p className="text-sm text-gray-500 bg-gray-50 dark:bg-zinc-900 border border-gray-100 rounded-2xl p-4 mb-4">
+          Define cuánto quieres gastar por categoría. Te avisaremos al llegar al 80%.
+        </p>
+      )}
+
       {lb || lt ? (
         <div className="space-y-2">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-16 bg-white border border-gray-100 rounded-2xl animate-pulse" />
+            <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse" />
           ))}
         </div>
       ) : (

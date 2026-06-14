@@ -4,7 +4,11 @@
       "PowerShell(npx cap add android 2>&1)",
       "PowerShell(npm run build:apk 2>&1)",
       "PowerShell(npm run build 2>&1)",
-      "PowerShell(npm install @aparajita/capacitor-biometric-auth 2>&1)"
+      "PowerShell(npm install @aparajita/capacitor-biometric-auth 2>&1)",
+      "PowerShell(npm install @capacitor/browser @capacitor/app 2>&1)",
+      "PowerShell(npm install --save-dev sharp 2>&1)",
+      "PowerShell(node scripts/generate-icons.mjs 2>&1)",
+      "PowerShell(if \\($?\\) { \"TYPECHECK OK - sin errores de tipos\" })"
     ]
   }
 }

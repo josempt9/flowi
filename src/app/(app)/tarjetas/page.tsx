@@ -1,16 +1,21 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react'
+import { Check, CreditCard, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCards } from '@/hooks/useCards'
 import { formatMXN, formatPercent } from '@/lib/utils/format'
 import { computeCardFloat } from '@/lib/utils/float'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { SkeletonList } from '@/components/shared/Skeleton'
+import { showToast } from '@/lib/toast'
+import { ErrorState } from '@/components/shared/ErrorState'
 
+// Tokens semánticos (shadcn): adaptan claro/oscuro sin overrides.
 const inputClass =
-  'w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:ring-zinc-400'
+  'w-full px-4 py-3 rounded-xl border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent'
 
 export default function TarjetasPage() {
   const { cards, loading, error, refresh } = useCards()
@@ -37,6 +42,7 @@ export default function TarjetasPage() {
       .update({ current_balance: parseFloat(editValue) || 0 })
       .eq('id', id)
     if (error) setActionError(error.message)
+    else showToast('Saldo actualizado')
     setEditingId(null)
     setBusy(false)
     refresh()
@@ -47,6 +53,7 @@ export default function TarjetasPage() {
     setActionError('')
     const { error } = await supabase.from('credit_cards').update({ is_active: false }).eq('id', id)
     if (error) setActionError(error.message)
+    else showToast('Tarjeta eliminada')
     setConfirmingId(null)
     setBusy(false)
     refresh()
@@ -60,40 +67,40 @@ export default function TarjetasPage() {
         action={
           <button
             onClick={() => setShowAdd((v) => !v)}
-            className="inline-flex items-center gap-1 text-sm font-medium text-black hover:underline"
+            className="inline-flex items-center gap-1 text-sm font-medium text-foreground hover:underline"
           >
             <Plus className="w-4 h-4" /> Agregar
           </button>
         }
       />
 
-      {(error || actionError) && (
-        <p className="text-red-500 text-sm mb-4">{actionError || error}</p>
-      )}
+      {actionError && <p className="text-red-500 text-sm mb-4">{actionError}</p>}
 
       {showAdd && <AddCardForm onDone={() => { setShowAdd(false); refresh() }} />}
 
       {loading ? (
-        <div className="space-y-3">
-          {[0, 1].map((i) => (
-            <div key={i} className="h-40 bg-white border border-gray-100 rounded-2xl animate-pulse" />
-          ))}
-        </div>
+        <SkeletonList rows={2} height="h-40" />
+      ) : error ? (
+        <ErrorState message="No pudimos cargar tus tarjetas." retry={refresh} />
       ) : cards.length === 0 ? (
-        <div className="bg-white border border-dashed border-gray-200 rounded-2xl p-8 text-center">
-          <p className="text-sm text-gray-500">No tienes tarjetas registradas.</p>
-        </div>
+        <EmptyState
+          icon={CreditCard}
+          title="Sin tarjetas"
+          message="Agrega tu primera tarjeta de crédito para controlar su uso y float."
+          ctaLabel="Agregar tarjeta"
+          onAction={() => setShowAdd(true)}
+        />
       ) : (
         <div className="space-y-4">
           {cards.map((c) => {
             const float = computeCardFloat(c, accounts)
             const utilPct = float.utilization * 100
             return (
-              <div key={c.id} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+              <div key={c.id} className="bg-card border border-border rounded-2xl p-5 shadow-sm">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">{c.name}</p>
-                    <p className="text-xs text-gray-400">{c.institution}</p>
+                    <p className="text-sm font-semibold text-foreground">{c.name}</p>
+                    <p className="text-xs text-muted-foreground">{c.institution}</p>
                   </div>
                   {confirmingId === c.id ? (
                     <div className="flex items-center gap-2">
@@ -106,7 +113,7 @@ export default function TarjetasPage() {
                       </button>
                       <button
                         onClick={() => setConfirmingId(null)}
-                        className="text-xs text-gray-400 hover:text-black"
+                        className="text-xs text-muted-foreground hover:text-foreground"
                       >
                         Cancelar
                       </button>
@@ -114,7 +121,7 @@ export default function TarjetasPage() {
                   ) : (
                     <button
                       onClick={() => setConfirmingId(c.id)}
-                      className="text-gray-300 hover:text-red-500"
+                      className="text-muted-foreground hover:text-red-500"
                       aria-label="Eliminar tarjeta"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -137,14 +144,14 @@ export default function TarjetasPage() {
                       <button
                         onClick={() => saveBalance(c.id)}
                         disabled={busy}
-                        className="p-2.5 rounded-xl bg-black text-white shrink-0"
+                        className="p-2.5 rounded-xl bg-primary text-primary-foreground shrink-0"
                         aria-label="Guardar saldo"
                       >
                         <Check className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => setEditingId(null)}
-                        className="p-2.5 rounded-xl border border-gray-200 shrink-0"
+                        className="p-2.5 rounded-xl border border-border shrink-0"
                         aria-label="Cancelar"
                       >
                         <X className="w-4 h-4" />
@@ -153,11 +160,11 @@ export default function TarjetasPage() {
                   ) : (
                     <>
                       <div>
-                        <p className="text-xs text-gray-400">Saldo utilizado</p>
-                        <p className="text-xl font-bold text-gray-900">
+                        <p className="text-xs text-muted-foreground">Saldo utilizado</p>
+                        <p className="text-xl font-bold text-foreground">
                           {formatMXN(Number(c.current_balance))}
                         </p>
-                        <p className="text-xs text-gray-400 mt-0.5">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           de {formatMXN(Number(c.credit_limit))}
                         </p>
                       </div>
@@ -166,7 +173,7 @@ export default function TarjetasPage() {
                           setEditingId(c.id)
                           setEditValue(String(c.current_balance))
                         }}
-                        className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-black"
+                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                       >
                         <Pencil className="w-3.5 h-3.5" /> Editar
                       </button>
@@ -176,15 +183,15 @@ export default function TarjetasPage() {
 
                 {/* Utilización */}
                 <div className="mt-3">
-                  <div className="flex justify-between text-xs text-gray-400 mb-1">
+                  <div className="flex justify-between text-xs text-muted-foreground mb-1">
                     <span>Utilización</span>
                     <span className={utilPct >= 80 ? 'text-red-500 font-medium' : ''}>
                       {utilPct.toFixed(0)}%
                     </span>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${utilPct >= 80 ? 'bg-red-500' : 'bg-black dark:bg-white'}`}
+                      className={`h-full rounded-full ${utilPct >= 80 ? 'bg-red-500' : 'bg-foreground'}`}
                       style={{ width: `${utilPct}%` }}
                     />
                   </div>
@@ -192,15 +199,15 @@ export default function TarjetasPage() {
 
                 {/* Float + días */}
                 <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                  <div className="bg-gray-50 rounded-xl p-3">
-                    <p className="text-xs text-gray-400">Días para pago</p>
-                    <p className="font-semibold text-gray-900">
+                  <div className="bg-muted rounded-xl p-3">
+                    <p className="text-xs text-muted-foreground">Días para pago</p>
+                    <p className="font-semibold text-foreground">
                       {float.daysToPayment !== null ? `${float.daysToPayment} días` : '—'}
                     </p>
                   </div>
-                  <div className="bg-gray-50 rounded-xl p-3">
-                    <p className="text-xs text-gray-400">Float del periodo</p>
-                    <p className="font-semibold text-gray-900">{formatMXN(float.benefit)}</p>
+                  <div className="bg-muted rounded-xl p-3">
+                    <p className="text-xs text-muted-foreground">Float del periodo</p>
+                    <p className="font-semibold text-foreground">{formatMXN(float.benefit)}</p>
                   </div>
                 </div>
               </div>
@@ -208,7 +215,7 @@ export default function TarjetasPage() {
           })}
 
           {totalFloat > 0 && (
-            <p className="text-xs text-gray-500 text-center px-4">
+            <p className="text-xs text-muted-foreground text-center px-4">
               El float es el rendimiento que tu dinero gana mientras financias estas
               compras hasta la fecha de pago, a {formatPercent(
                 accounts.reduce((m, a) => Math.max(m, a.yield_rate ?? 0), 0)
@@ -303,7 +310,7 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm mb-4 space-y-3">
+    <div className="bg-card border border-border rounded-2xl p-5 shadow-sm mb-4 space-y-3">
       <div className="flex gap-2">
         <input
           value={name}
@@ -314,7 +321,7 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
         <button
           onClick={searchConditions}
           disabled={searching || !name.trim()}
-          className="shrink-0 inline-flex items-center gap-1 px-3 rounded-xl border border-gray-200 text-sm text-gray-700 hover:border-black disabled:opacity-50"
+          className="shrink-0 inline-flex items-center gap-1 px-3 rounded-xl border border-border text-sm text-muted-foreground hover:border-foreground disabled:opacity-50"
         >
           <Sparkles className="w-4 h-4" />
           {searching ? '…' : 'Buscar'}
@@ -322,7 +329,7 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
       </div>
 
       {info && (
-        <p className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3">{info}</p>
+        <p className="text-xs text-muted-foreground bg-muted rounded-xl p-3">{info}</p>
       )}
 
       <input
@@ -396,7 +403,7 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
       <button
         onClick={submit}
         disabled={busy || !name.trim() || !limit}
-        className="w-full bg-black text-white py-3 rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
+        className="w-full bg-primary text-primary-foreground py-3 rounded-xl text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
       >
         {busy ? 'Guardando…' : 'Guardar tarjeta'}
       </button>

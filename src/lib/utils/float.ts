@@ -48,6 +48,33 @@ export interface CardFloat {
   benefit: number
 }
 
+export interface CardRecommendation {
+  card: CreditCard
+  days: number
+  benefit: number
+}
+
+/**
+ * Recomienda la tarjeta que maximiza el float para una compra: la que tiene más
+ * días hasta su pago. Devuelve null si no hay tarjetas con fecha de pago.
+ */
+export function recommendCardForExpense(
+  amount: number,
+  cards: CreditCard[],
+  accounts: Account[]
+): CardRecommendation | null {
+  const yieldRate = bestYieldRate(accounts)
+  let best: CardRecommendation | null = null
+  for (const card of cards) {
+    const days = daysUntilMonthDay(card.payment_day)
+    if (days === null) continue
+    if (!best || days > best.days) {
+      best = { card, days, benefit: floatBenefit(amount, days, yieldRate) }
+    }
+  }
+  return best
+}
+
 /** Calcula el float de una tarjeta usando la mejor tasa disponible. */
 export function computeCardFloat(card: CreditCard, accounts: Account[]): CardFloat {
   const daysToPayment = daysUntilMonthDay(card.payment_day)

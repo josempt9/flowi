@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { AlertTriangle, TrendingUp } from 'lucide-react'
+import { AlertTriangle, Repeat, TrendingUp } from 'lucide-react'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useBudgets } from '@/hooks/useBudgets'
 import { useAccounts } from '@/hooks/useAccounts'
@@ -10,6 +10,7 @@ import { ESSENTIAL_CATEGORIES } from '@/lib/constants'
 import { formatMXN, formatMXNCompact } from '@/lib/utils/format'
 import { displayInflow, isInflow } from '@/lib/utils/transactions'
 import { computeScore } from '@/lib/utils/score'
+import { detectRecurring } from '@/lib/utils/recurring'
 import { LineChart } from '@/components/shared/LineChart'
 import { PageHeader } from '@/components/shared/PageHeader'
 
@@ -66,6 +67,10 @@ export default function DashboardPage() {
     )
     .reduce((s, t) => s + Number(t.amount), 0)
 
+  // Gastos recurrentes detectados
+  const recurring = detectRecurring(transactions)
+  const recurringTotal = recurring.reduce((s, r) => s + r.monthlyCost, 0)
+
   // Score financiero
   const score = computeScore({ accounts, cards, transactions, budgets })
 
@@ -107,7 +112,7 @@ export default function DashboardPage() {
       />
 
       {loading ? (
-        <div className="h-28 bg-white border border-gray-100 rounded-2xl animate-pulse" />
+        <div className="h-28 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse" />
       ) : (
         <>
           {/* Score + patrimonio */}
@@ -202,6 +207,30 @@ export default function DashboardPage() {
                     </div>
                   )
                 })}
+              </div>
+            </section>
+          )}
+
+          {/* Compromisos detectados (gastos recurrentes) */}
+          {recurring.length > 0 && (
+            <section className="mt-4 bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-gray-900">Compromisos detectados</h2>
+                <span className="text-xs text-gray-400">≈ {formatMXN(recurringTotal)}/mes</span>
+              </div>
+              <div className="space-y-2">
+                {recurring.slice(0, 6).map((r) => (
+                  <div key={r.label} className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2 text-gray-700 min-w-0">
+                      <Repeat className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                      <span className="truncate">{r.label}</span>
+                    </span>
+                    <span className="text-gray-900 font-medium shrink-0">
+                      {formatMXN(r.monthlyCost)}
+                      <span className="text-gray-400 font-normal">/mes</span>
+                    </span>
+                  </div>
+                ))}
               </div>
             </section>
           )}

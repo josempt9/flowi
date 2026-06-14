@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ServiceWorkerRegister } from "@/components/shared/ServiceWorkerRegister";
+import { NativeAuthHandler } from "@/components/auth/NativeAuthHandler";
+import { Toaster } from "@/components/shared/Toaster";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,6 +49,8 @@ export default function RootLayout({
         />
         {children}
         <ServiceWorkerRegister />
+        <NativeAuthHandler />
+        <Toaster />
       </body>
     </html>
   );

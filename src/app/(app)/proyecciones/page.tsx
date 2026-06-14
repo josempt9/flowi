@@ -81,7 +81,7 @@ export default function ProyeccionesPage() {
       </div>
 
       {loading ? (
-        <div className="h-40 bg-white border border-gray-100 rounded-2xl animate-pulse" />
+        <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse" />
       ) : (
         <>
           {/* Liquidez actual */}

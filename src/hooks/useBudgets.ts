@@ -23,7 +23,7 @@ export function useBudgets() {
     }
     const { data, error } = await supabase
       .from('budgets')
-      .select('*')
+      .select('id, user_id, category, amount, created_at')
       .eq('user_id', user.id)
       .order('category', { ascending: true })
 

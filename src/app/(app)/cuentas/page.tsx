@@ -12,11 +12,14 @@ import {
 } from '@/lib/constants'
 import { formatMXN, formatPercent } from '@/lib/utils/format'
 import { createTransfer } from '@/lib/services/transfers'
+import { showToast } from '@/lib/toast'
+import { ErrorState } from '@/components/shared/ErrorState'
 import { PageHeader } from '@/components/shared/PageHeader'
 import type { Account, AccountType } from '@/types/finance'
 
+// Tokens semánticos (shadcn): adaptan claro/oscuro sin overrides.
 const inputClass =
-  'w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:ring-zinc-400'
+  'w-full px-4 py-3 rounded-xl border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent'
 
 export default function CuentasPage() {
   const { accounts, loading, error, refresh } = useAccounts()
@@ -39,6 +42,7 @@ export default function CuentasPage() {
       .update({ balance: parseFloat(editValue) || 0, last_updated: new Date().toISOString() })
       .eq('id', id)
     if (error) setActionError(error.message)
+    else showToast('Saldo actualizado')
     setEditingId(null)
     setBusy(false)
     refresh()
@@ -49,6 +53,7 @@ export default function CuentasPage() {
     setActionError('')
     const { error } = await supabase.from('accounts').update({ is_active: false }).eq('id', id)
     if (error) setActionError(error.message)
+    else showToast('Cuenta eliminada')
     setConfirmingId(null)
     setBusy(false)
     refresh()
@@ -86,14 +91,14 @@ export default function CuentasPage() {
             {accounts.length >= 2 && (
               <button
                 onClick={() => setShowTransfer(true)}
-                className="inline-flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-black"
+                className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeftRight className="w-4 h-4" /> Transferir
               </button>
             )}
             <button
               onClick={() => setShowAdd((v) => !v)}
-              className="inline-flex items-center gap-1 text-sm font-medium text-black hover:underline"
+              className="inline-flex items-center gap-1 text-sm font-medium text-foreground hover:underline"
             >
               <Plus className="w-4 h-4" /> Agregar
             </button>
@@ -101,27 +106,27 @@ export default function CuentasPage() {
         }
       />
 
-      {(error || actionError) && (
-        <p className="text-red-500 text-sm mb-4">{actionError || error}</p>
-      )}
+      {actionError && <p className="text-red-500 text-sm mb-4">{actionError}</p>}
 
       {showAdd && <AddAccountForm onDone={() => { setShowAdd(false); refresh() }} />}
 
       {loading ? (
         <div className="space-y-2">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-20 bg-white border border-gray-100 rounded-2xl animate-pulse" />
+            <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse" />
           ))}
         </div>
+      ) : error ? (
+        <ErrorState message="No pudimos cargar tus cuentas." retry={refresh} />
       ) : accounts.length === 0 ? (
-        <div className="bg-white border border-dashed border-gray-200 rounded-2xl p-8 text-center">
-          <p className="text-sm text-gray-500">
+        <div className="bg-card border border-dashed border-border rounded-2xl p-8 text-center">
+          <p className="text-sm text-muted-foreground">
             No tienes cuentas todavía. Crea las cuentas y tarjetas iniciales para empezar.
           </p>
           <button
             onClick={seedInitial}
             disabled={busy}
-            className="mt-4 bg-black text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
+            className="mt-4 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
           >
             {busy ? 'Creando…' : 'Crear cuentas iniciales'}
           </button>
@@ -131,7 +136,7 @@ export default function CuentasPage() {
           {accounts.map((a) => (
             <div
               key={a.id}
-              className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm"
+              className="bg-card border border-border rounded-2xl p-4 shadow-sm"
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2 min-w-0">
@@ -140,8 +145,8 @@ export default function CuentasPage() {
                     style={{ backgroundColor: a.color ?? '#000' }}
                   />
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{a.name}</p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-sm font-semibold text-foreground truncate">{a.name}</p>
+                    <p className="text-xs text-muted-foreground">
                       {accountTypeLabel(a.type)}
                       {a.yield_rate ? ` · ${formatPercent(a.yield_rate)} anual` : ''}
                     </p>
@@ -159,7 +164,7 @@ export default function CuentasPage() {
                     </button>
                     <button
                       onClick={() => setConfirmingId(null)}
-                      className="text-xs text-gray-400 hover:text-black"
+                      className="text-xs text-muted-foreground hover:text-foreground"
                     >
                       Cancelar
                     </button>
@@ -167,7 +172,7 @@ export default function CuentasPage() {
                 ) : (
                   <button
                     onClick={() => setConfirmingId(a.id)}
-                    className="text-gray-300 hover:text-red-500 shrink-0"
+                    className="text-muted-foreground hover:text-red-500 shrink-0"
                     aria-label="Eliminar cuenta"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -189,14 +194,14 @@ export default function CuentasPage() {
                     <button
                       onClick={() => saveBalance(a.id)}
                       disabled={busy}
-                      className="p-2.5 rounded-xl bg-black text-white shrink-0"
+                      className="p-2.5 rounded-xl bg-primary text-primary-foreground shrink-0"
                       aria-label="Guardar saldo"
                     >
                       <Check className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setEditingId(null)}
-                      className="p-2.5 rounded-xl border border-gray-200 shrink-0"
+                      className="p-2.5 rounded-xl border border-border shrink-0"
                       aria-label="Cancelar"
                     >
                       <X className="w-4 h-4" />
@@ -204,7 +209,7 @@ export default function CuentasPage() {
                   </div>
                 ) : (
                   <>
-                    <p className="text-xl font-bold text-gray-900">
+                    <p className="text-xl font-bold text-foreground">
                       {formatMXN(Number(a.balance))}
                     </p>
                     <button
@@ -212,7 +217,7 @@ export default function CuentasPage() {
                         setEditingId(a.id)
                         setEditValue(String(a.balance))
                       }}
-                      className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-black"
+                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                     >
                       <Pencil className="w-3.5 h-3.5" /> Actualizar saldo
                     </button>
@@ -292,22 +297,23 @@ function TransferModal({
       setBusy(false)
       return
     }
+    showToast('Transferencia realizada')
     onDone()
   }
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6">
+      <div className="bg-card w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-gray-900">Transferencia entre cuentas</h2>
-          <button onClick={onClose} aria-label="Cerrar" className="text-gray-400 hover:text-black">
+          <h2 className="text-lg font-bold text-foreground">Transferencia entre cuentas</h2>
+          <button onClick={onClose} aria-label="Cerrar" className="text-muted-foreground hover:text-foreground">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="space-y-3">
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Desde</label>
+            <label className="block text-xs text-muted-foreground mb-1">Desde</label>
             <select value={fromId} onChange={(e) => setFromId(e.target.value)} className={inputClass}>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -316,11 +322,11 @@ function TransferModal({
               ))}
             </select>
           </div>
-          <div className="flex justify-center text-gray-300">
+          <div className="flex justify-center text-muted-foreground">
             <ArrowLeftRight className="w-4 h-4 rotate-90" />
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Hacia</label>
+            <label className="block text-xs text-muted-foreground mb-1">Hacia</label>
             <select value={toId} onChange={(e) => setToId(e.target.value)} className={inputClass}>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -331,7 +337,7 @@ function TransferModal({
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-xs text-gray-400 mb-1">Monto</label>
+              <label className="block text-xs text-muted-foreground mb-1">Monto</label>
               <input
                 type="number"
                 step="0.01"
@@ -342,12 +348,12 @@ function TransferModal({
               />
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-gray-400 mb-1">Fecha</label>
+              <label className="block text-xs text-muted-foreground mb-1">Fecha</label>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
             </div>
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Notas (opcional)</label>
+            <label className="block text-xs text-muted-foreground mb-1">Notas (opcional)</label>
             <input value={notes} onChange={(e) => setNotes(e.target.value)} className={inputClass} />
           </div>
         </div>
@@ -357,11 +363,11 @@ function TransferModal({
         <button
           onClick={submit}
           disabled={busy}
-          className="w-full bg-black text-white py-3 rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-50 mt-5"
+          className="w-full bg-primary text-primary-foreground py-3 rounded-xl text-sm font-medium hover:bg-primary/90 disabled:opacity-50 mt-5"
         >
           {busy ? 'Transfiriendo…' : 'Confirmar transferencia'}
         </button>
-        <p className="text-xs text-gray-400 text-center mt-2">
+        <p className="text-xs text-muted-foreground text-center mt-2">
           Mueve el saldo entre cuentas. No cuenta como ingreso ni gasto.
         </p>
       </div>
@@ -409,7 +415,7 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm mb-4 space-y-3">
+    <div className="bg-card border border-border rounded-2xl p-5 shadow-sm mb-4 space-y-3">
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
@@ -449,7 +455,7 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
       <button
         onClick={submit}
         disabled={busy || !name.trim()}
-        className="w-full bg-black text-white py-3 rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
+        className="w-full bg-primary text-primary-foreground py-3 rounded-xl text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
       >
         {busy ? 'Guardando…' : 'Guardar cuenta'}
       </button>

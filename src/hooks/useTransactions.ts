@@ -23,7 +23,9 @@ export function useTransactions(limit?: number) {
     }
     let query = supabase
       .from('transactions')
-      .select('*')
+      .select(
+        'id, user_id, account_id, card_id, type, amount, description, raw_input, category_id, ai_category, confidence_score, date, transfer_pair_id, is_recurring, msi_months, notes, created_at'
+      )
       .eq('user_id', user.id)
       .order('date', { ascending: false })
       .order('created_at', { ascending: false })

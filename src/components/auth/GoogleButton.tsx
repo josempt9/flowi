@@ -11,11 +11,34 @@ export function GoogleButton() {
     setLoading(true)
     setError('')
     const supabase = createClient()
+    const { Capacitor } = await import('@capacitor/core')
+
+    // En el APK (WebView) Google bloquea el OAuth embebido: abrimos el flujo
+    // en el navegador del sistema y capturamos el retorno por deep link.
+    if (Capacitor.isNativePlatform()) {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: 'com.flowi.app://auth/callback',
+          skipBrowserRedirect: true,
+        },
+      })
+      if (error || !data?.url) {
+        setError('No se pudo iniciar sesión con Google.')
+        setLoading(false)
+        return
+      }
+      const { Browser } = await import('@capacitor/browser')
+      await Browser.open({ url: data.url })
+      // El retorno (com.flowi.app://auth/callback?code=...) lo maneja NativeAuthHandler.
+      return
+    }
+
+    // Web: redirección normal del navegador.
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin + '/auth/callback' },
     })
-    // En éxito el navegador redirige a Google; solo llegamos aquí si falla.
     if (error) {
       setError('No se pudo conectar con Google. Intenta de nuevo.')
       setLoading(false)

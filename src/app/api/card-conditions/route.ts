@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -45,6 +46,13 @@ function extractJson(text: string): unknown | null {
 }
 
 export async function POST(request: Request) {
+  if (!checkRateLimit(getClientIp(request))) {
+    return NextResponse.json(
+      { error: 'Demasiadas solicitudes. Espera un minuto e intenta de nuevo.' },
+      { status: 429 }
+    )
+  }
+
   let body: { name?: unknown }
   try {
     body = await request.json()

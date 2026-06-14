@@ -1,23 +1,28 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowDownLeft, ArrowUpRight, Clock, Settings, Sparkles } from 'lucide-react'
+import { AlertTriangle, ArrowDownLeft, ArrowUpRight, Clock, Settings, Sparkles } from 'lucide-react'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCards } from '@/hooks/useCards'
 import { useTransactions } from '@/hooks/useTransactions'
+import { useBudgets } from '@/hooks/useBudgets'
 import { typeLabel } from '@/lib/constants'
 import { formatMXN, formatMXNCompact, formatRelative } from '@/lib/utils/format'
 import { bestYieldRate, computeCardFloat, daysUntilMonthDay } from '@/lib/utils/float'
 import { displayInflow } from '@/lib/utils/transactions'
 import { OnboardingWizard } from '@/components/home/OnboardingWizard'
+import { WeeklySummaryBanner } from '@/components/home/WeeklySummaryBanner'
 
 export default function HomePage() {
   const { accounts, loading: la, refresh: refreshAccounts } = useAccounts()
   const { cards, loading: lc } = useCards()
-  const { transactions, loading: lt, refresh: refreshTransactions } = useTransactions(8)
+  const { transactions, loading: lt, refresh: refreshTransactions } = useTransactions(50)
+  const { budgets } = useBudgets()
 
   // Usuario nuevo: ya cargó y no tiene ningún movimiento registrado.
   const isNewUser = !la && !lt && transactions.length === 0
+
+  const recent = transactions.slice(0, 8)
 
   const liquid = accounts.reduce((sum, a) => sum + Number(a.balance), 0)
   const debt = cards.reduce((sum, c) => sum + Number(c.current_balance), 0)
@@ -33,6 +38,22 @@ export default function HomePage() {
     const d = daysUntilMonthDay(c.payment_day)
     return d !== null && d <= 3 && Number(c.current_balance) > 0
   })
+
+  // Alerta in-app: categorías que alcanzan el 80% del presupuesto este mes.
+  const now = new Date()
+  const monthSpend = new Map<string, number>()
+  for (const t of transactions) {
+    const d = new Date(t.date)
+    if (d.getFullYear() !== now.getFullYear() || d.getMonth() !== now.getMonth()) continue
+    if (t.type === 'transfer' || displayInflow(t)) continue
+    const cat = t.ai_category || 'General'
+    monthSpend.set(cat, (monthSpend.get(cat) ?? 0) + Number(t.amount))
+  }
+  const budgetAlerts = budgets
+    .filter((b) => Number(b.amount) > 0)
+    .map((b) => ({ cat: b.category, pct: (monthSpend.get(b.category) ?? 0) / Number(b.amount) }))
+    .filter((x) => x.pct >= 0.8)
+    .sort((a, b) => b.pct - a.pct)
 
   return (
     <div className="max-w-md mx-auto px-4 pt-10 pb-28">
@@ -54,6 +75,7 @@ export default function HomePage() {
         />
       ) : (
       <>
+      <WeeklySummaryBanner transactions={transactions} cards={cards} accounts={accounts} />
       {/* Patrimonio */}
       <section className="bg-black text-white rounded-3xl p-6">
         <p className="text-sm text-gray-300">Patrimonio neto</p>
@@ -114,6 +136,24 @@ export default function HomePage() {
         )
       })}
 
+      {/* Alerta in-app: presupuesto al 80% */}
+      {budgetAlerts.map((a) => (
+        <Link
+          key={a.cat}
+          href="/presupuestos"
+          className="mt-3 flex items-center gap-3 bg-white border border-gray-100 rounded-2xl p-4 shadow-sm"
+        >
+          <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-4 h-4 text-black" />
+          </div>
+          <p className="text-sm text-gray-700">
+            {a.pct >= 1 ? 'Superaste' : 'Vas al'}{' '}
+            <span className="font-semibold text-black">{(a.pct * 100).toFixed(0)}%</span>{' '}
+            de tu presupuesto de <span className="font-semibold text-black">{a.cat}</span>.
+          </p>
+        </Link>
+      ))}
+
       {/* Cuentas */}
       <section className="mt-6">
         <div className="flex items-center justify-between mb-3">
@@ -173,7 +213,7 @@ export default function HomePage() {
           />
         ) : (
           <div className="bg-white border border-gray-100 rounded-2xl shadow-sm divide-y divide-gray-100">
-            {transactions.map((t) => {
+            {recent.map((t) => {
               const inflow = displayInflow(t)
               return (
                 <div key={t.id} className="flex items-center gap-3 p-4">
@@ -212,7 +252,7 @@ function SkeletonRows() {
   return (
     <div className="space-y-2">
       {[0, 1, 2].map((i) => (
-        <div key={i} className="h-16 bg-white border border-gray-100 rounded-2xl animate-pulse" />
+        <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse" />
       ))}
     </div>
   )
