@@ -11,7 +11,12 @@ import { nextOccurrenceDate, daysUntilDate } from '@/lib/utils/recurringItems'
 import { signedAmount } from '@/lib/utils/transactions'
 import { recommendCardForExpense } from '@/lib/utils/float'
 import { formatMXN } from '@/lib/utils/format'
-import { createRecognition, speechSupported, type SpeechRecognitionLike } from '@/lib/speech'
+import {
+  createRecognition,
+  ensureMicPermission,
+  speechSupported,
+  type SpeechRecognitionLike,
+} from '@/lib/speech'
 import { showToast } from '@/lib/toast'
 import { CurrencyInput } from '@/components/shared/CurrencyInput'
 import type { TransactionType } from '@/types/finance'
@@ -155,23 +160,30 @@ export function RegisterFlow({
     }, 100)
   }
 
-  const startVoice = () => {
+  const startVoice = async () => {
     if (!speechSupported()) return
+    // En Android (WebView) el reconocimiento se silencia sin error si no hay
+    // permiso de micrófono; forzamos el diálogo nativo antes de empezar.
+    const allowed = await ensureMicPermission()
+    if (!allowed) {
+      setError('Necesitamos permiso de micrófono para dictar.')
+      return
+    }
     wantListeningRef.current = true
     finalTranscriptRef.current = input.trim() ? input.trim() + ' ' : ''
     setListening(true)
     launchRecognition()
   }
 
+  const toggleVoice = () => {
+    if (listening) stopVoice()
+    else void startVoice()
+  }
+
   const stopVoice = () => {
     wantListeningRef.current = false
     setListening(false)
     recognitionRef.current?.stop()
-  }
-
-  const toggleVoice = () => {
-    if (listening) stopVoice()
-    else startVoice()
   }
 
   const handleTicket = async (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -59,3 +59,28 @@ export function createRecognition(): SpeechRecognitionLike | null {
   const Ctor = getCtor()
   return Ctor ? new Ctor() : null
 }
+
+/**
+ * Solicita explícitamente el permiso de micrófono antes de iniciar el
+ * reconocimiento. En el WebView de Android (Capacitor) la Web Speech API se
+ * silencia SIN error visible si el permiso no fue concedido; getUserMedia fuerza
+ * el diálogo nativo del sistema. Devuelve true si el micrófono está disponible.
+ *
+ * En navegadores de escritorio donde SpeechRecognition ya gestiona su propio
+ * permiso, un fallo aquí no debe bloquear: devolvemos true para no regresar.
+ */
+export async function ensureMicPermission(): Promise<boolean> {
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+    // Sin mediaDevices (p. ej. contexto no seguro): dejamos que el reconocimiento lo intente.
+    return true
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    // Liberamos el micrófono de inmediato; solo queríamos disparar el permiso.
+    stream.getTracks().forEach((t) => t.stop())
+    return true
+  } catch {
+    // Permiso denegado o sin dispositivo: el llamador no debe iniciar el dictado.
+    return false
+  }
+}

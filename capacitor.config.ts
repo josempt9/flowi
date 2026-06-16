@@ -13,6 +13,10 @@ const config: CapacitorConfig = {
     url: 'https://flowi-joy7.vercel.app',
     cleartext: false,
   },
+  android: {
+    // Permite que el WebView gestione el permiso de micrófono para el dictado.
+    allowMixedContent: true,
+  },
 };
 
 export default config;
