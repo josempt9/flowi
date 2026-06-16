@@ -24,7 +24,8 @@ export default function TarjetasPage() {
   const { accounts } = useAccounts()
   const { subaccounts } = useSubaccounts()
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editValue, setEditValue] = useState('')
+  const [editCP, setEditCP] = useState('')
+  const [editMP, setEditMP] = useState('')
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -37,15 +38,18 @@ export default function TarjetasPage() {
     0
   )
 
-  const saveBalance = async (id: string) => {
+  const saveBalances = async (id: string) => {
     setBusy(true)
     setActionError('')
     const { error } = await supabase
       .from('credit_cards')
-      .update({ current_balance: parseFloat(editValue) || 0 })
+      .update({
+        current_balance: parseFloat(editCP) || 0,
+        previous_balance: parseFloat(editMP) || 0,
+      })
       .eq('id', id)
     if (error) setActionError(error.message)
-    else showToast('Saldo actualizado')
+    else showToast('Saldos actualizados')
     setEditingId(null)
     setBusy(false)
     refresh()
@@ -132,55 +136,90 @@ export default function TarjetasPage() {
                   )}
                 </div>
 
-                {/* Saldo / límite */}
-                <div className="mt-4 flex items-end justify-between">
-                  {editingId === c.id ? (
-                    <div className="flex items-center gap-2 w-full">
+                {/* Saldos por cortes (CP / MP) */}
+                {editingId === c.id ? (
+                  <div className="mt-4 bg-muted rounded-xl p-4 space-y-4">
+                    <p className="text-sm font-semibold text-foreground">Actualizar saldos</p>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">
+                        Saldo 1er corte (CP)
+                      </label>
                       <CurrencyInput
-                        value={parseFloat(editValue) || 0}
-                        onChange={(n) => setEditValue(String(n))}
+                        value={parseFloat(editCP) || 0}
+                        onChange={(n) => setEditCP(String(n))}
                         className={inputClass}
                         autoFocus
                       />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Ciclo actual{c.payment_day ? ` · vence día ${c.payment_day}` : ''}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">
+                        Saldo 2do corte (MP)
+                      </label>
+                      <CurrencyInput
+                        value={parseFloat(editMP) || 0}
+                        onChange={(n) => setEditMP(String(n))}
+                        className={inputClass}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Ciclo anterior · ya cortó</p>
+                    </div>
+                    <div className="flex gap-2">
                       <button
-                        onClick={() => saveBalance(c.id)}
+                        onClick={() => saveBalances(c.id)}
                         disabled={busy}
-                        className="p-2.5 rounded-xl bg-primary text-primary-foreground shrink-0"
-                        aria-label="Guardar saldo"
+                        className="flex-1 inline-flex items-center justify-center gap-1 bg-primary text-primary-foreground py-2.5 rounded-xl text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
                       >
-                        <Check className="w-4 h-4" />
+                        <Check className="w-4 h-4" /> Guardar
                       </button>
                       <button
                         onClick={() => setEditingId(null)}
-                        className="p-2.5 rounded-xl border border-border shrink-0"
-                        aria-label="Cancelar"
+                        className="px-4 py-2.5 rounded-xl border border-border text-sm text-muted-foreground inline-flex items-center gap-1"
                       >
-                        <X className="w-4 h-4" />
+                        <X className="w-4 h-4" /> Cancelar
                       </button>
                     </div>
-                  ) : (
-                    <>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Saldo utilizado</p>
-                        <p className="text-xl font-bold text-foreground">
+                  </div>
+                ) : (
+                  <div className="mt-4 flex items-end justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-baseline justify-between gap-6">
+                        <span className="text-xs text-muted-foreground">Ciclo actual (CP)</span>
+                        <span className="text-sm font-semibold text-foreground">
                           {formatMXN(Number(c.current_balance))}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          de {formatMXN(Number(c.credit_limit))}
-                        </p>
+                        </span>
                       </div>
-                      <button
-                        onClick={() => {
-                          setEditingId(c.id)
-                          setEditValue(String(c.current_balance))
-                        }}
-                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                      >
-                        <Pencil className="w-3.5 h-3.5" /> Editar
-                      </button>
-                    </>
-                  )}
-                </div>
+                      {Number(c.previous_balance) > 0 && (
+                        <div className="flex items-baseline justify-between gap-6">
+                          <span className="text-xs text-muted-foreground">Ciclo anterior (MP)</span>
+                          <span className="text-sm font-semibold text-foreground">
+                            {formatMXN(Number(c.previous_balance))}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-baseline justify-between gap-6 pt-1 border-t border-border">
+                        <span className="text-xs font-medium text-foreground">Total</span>
+                        <span className="text-lg font-bold text-foreground">
+                          {formatMXN(Number(c.current_balance) + Number(c.previous_balance))}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        de {formatMXN(Number(c.credit_limit))}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setEditingId(c.id)
+                        setEditCP(String(c.current_balance))
+                        setEditMP(String(c.previous_balance ?? 0))
+                      }}
+                      className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground shrink-0"
+                    >
+                      <Pencil className="w-3.5 h-3.5" /> Editar
+                    </button>
+                  </div>
+                )}
 
                 {/* Utilización */}
                 <div className="mt-3">

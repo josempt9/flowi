@@ -35,10 +35,11 @@ export function nextMonthDayDate(day: number | null): Date | null {
   return target
 }
 
-/** Utilización de la tarjeta: saldo / límite (0 a 1). */
+/** Utilización de la tarjeta: deuda total (CP + MP) / límite (0 a 1). */
 export function cardUtilization(card: CreditCard): number {
   if (!card.credit_limit) return 0
-  return Math.min(card.current_balance / card.credit_limit, 1)
+  const totalDebt = Number(card.current_balance) + Number(card.previous_balance ?? 0)
+  return Math.min(totalDebt / card.credit_limit, 1)
 }
 
 /**

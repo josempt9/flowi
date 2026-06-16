@@ -26,6 +26,7 @@ export default function CuentasPage() {
   const { subaccounts, refresh: refreshSubs } = useSubaccounts()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [showTransfer, setShowTransfer] = useState(false)
@@ -144,13 +145,22 @@ export default function CuentasPage() {
                     </button>
                   </div>
                 ) : (
-                  <button
-                    onClick={() => setConfirmingId(a.id)}
-                    className="text-muted-foreground hover:text-red-500 shrink-0"
-                    aria-label="Eliminar cuenta"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => setEditingAccount(a)}
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label="Editar cuenta"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setConfirmingId(a.id)}
+                      className="text-muted-foreground hover:text-red-500"
+                      aria-label="Eliminar cuenta"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -221,6 +231,147 @@ export default function CuentasPage() {
           }}
         />
       )}
+      {editingAccount && (
+        <EditAccountModal
+          account={editingAccount}
+          onClose={() => setEditingAccount(null)}
+          onDone={() => {
+            setEditingAccount(null)
+            refresh()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function EditAccountModal({
+  account,
+  onClose,
+  onDone,
+}: {
+  account: Account
+  onClose: () => void
+  onDone: () => void
+}) {
+  const [name, setName] = useState(account.name)
+  const [type, setType] = useState<AccountType>(account.type)
+  const [balance, setBalance] = useState(String(account.balance ?? 0))
+  const [yieldRate, setYieldRate] = useState(
+    account.yield_rate ? String((Number(account.yield_rate) * 100).toFixed(2)) : ''
+  )
+  const [institution, setInstitution] = useState(account.institution ?? '')
+  const [color, setColor] = useState(account.color ?? '#6366F1')
+  const [supportsSub, setSupportsSub] = useState(account.supports_subaccounts)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const supabase = createClient()
+
+  const allowsSub = type === 'savings' || type === 'investment'
+
+  const submit = async () => {
+    if (!name.trim()) return
+    setBusy(true)
+    setError('')
+    const { error } = await supabase
+      .from('accounts')
+      .update({
+        name: name.trim(),
+        type,
+        balance: parseFloat(balance) || 0,
+        yield_rate: parseFloat(yieldRate) / 100 || 0,
+        institution: institution.trim() || null,
+        color,
+        supports_subaccounts: allowsSub ? supportsSub : false,
+        last_updated: new Date().toISOString(),
+      })
+      .eq('id', account.id)
+    if (error) {
+      setError(error.message)
+      setBusy(false)
+      return
+    }
+    showToast('Cuenta actualizada')
+    onDone()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="bg-card w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-bold text-foreground">Editar cuenta</h2>
+          <button onClick={onClose} aria-label="Cerrar" className="text-muted-foreground hover:text-foreground">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1">Nombre</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1">Tipo de cuenta</label>
+            <select value={type} onChange={(e) => setType(e.target.value as AccountType)} className={inputClass}>
+              {ACCOUNT_TYPE_OPTIONS.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-xs text-muted-foreground mb-1">Saldo actual</label>
+              <CurrencyInput
+                value={parseFloat(balance) || 0}
+                onChange={(n) => setBalance(String(n))}
+                className={inputClass}
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs text-muted-foreground mb-1">Rend. % anual</label>
+              <input
+                type="number"
+                step="0.01"
+                value={yieldRate}
+                onChange={(e) => setYieldRate(e.target.value)}
+                placeholder="0"
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1">Institución (opcional)</label>
+            <input value={institution} onChange={(e) => setInstitution(e.target.value)} className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-xs text-muted-foreground mb-2">Color</label>
+            <ColorPicker value={color} onChange={setColor} />
+          </div>
+          {allowsSub && (
+            <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={supportsSub}
+                onChange={(e) => setSupportsSub(e.target.checked)}
+                className="w-4 h-4 rounded border-border accent-primary"
+              />
+              Acepta apartados
+            </label>
+          )}
+        </div>
+
+        {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
+
+        <button
+          onClick={submit}
+          disabled={busy || !name.trim()}
+          className="w-full bg-primary text-primary-foreground py-3 rounded-xl text-sm font-medium hover:bg-primary/90 disabled:opacity-50 mt-5"
+        >
+          {busy ? 'Guardando…' : 'Guardar cambios'}
+        </button>
+      </div>
     </div>
   )
 }
