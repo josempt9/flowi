@@ -161,3 +161,21 @@
    con fondo blanco en modo oscuro. */
 :root { color-scheme: light; }
 .dark { color-scheme: dark; }
+
+/* ----------------------------------------------------------------------------
+   Inputs de fecha — estilo limpio tipo Outlook. Conserva la funcionalidad
+   nativa (type='date') pero suaviza el ícono del picker y lo adapta a oscuro.
+---------------------------------------------------------------------------- */
+input[type='date'] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+}
+input[type='date']::-webkit-calendar-picker-indicator {
+  opacity: 0.5;
+  cursor: pointer;
+  filter: invert(0);
+}
+.dark input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}

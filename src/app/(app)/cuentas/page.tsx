@@ -1,19 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeftRight, Check, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { ArrowLeftRight, Check, Pencil, Plus, Trash2, Wallet, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useSubaccounts } from '@/hooks/useSubaccounts'
-import {
-  ACCOUNT_TYPE_OPTIONS,
-  INITIAL_ACCOUNTS,
-  INITIAL_CARDS,
-  accountTypeLabel,
-} from '@/lib/constants'
+import { ACCOUNT_TYPE_OPTIONS, accountTypeLabel } from '@/lib/constants'
 import { formatMXN, formatPercent } from '@/lib/utils/format'
 import { createTransfer } from '@/lib/services/transfers'
 import { showToast } from '@/lib/toast'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { ErrorState } from '@/components/shared/ErrorState'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { ColorPicker } from '@/components/shared/ColorPicker'
@@ -64,28 +60,6 @@ export default function CuentasPage() {
     refresh()
   }
 
-  const seedInitial = async () => {
-    setBusy(true)
-    setActionError('')
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) {
-      setActionError('Sesión no válida')
-      setBusy(false)
-      return
-    }
-    const { error: accErr } = await supabase.from('accounts').insert(
-      INITIAL_ACCOUNTS.map((a) => ({ ...a, user_id: user.id, balance: 0 }))
-    )
-    await supabase.from('credit_cards').insert(
-      INITIAL_CARDS.map((c) => ({ ...c, user_id: user.id }))
-    )
-    if (accErr) setActionError(accErr.message)
-    setBusy(false)
-    refresh()
-  }
-
   return (
     <div className="max-w-md mx-auto px-4 pt-10 pb-28">
       <PageHeader
@@ -124,18 +98,13 @@ export default function CuentasPage() {
       ) : error ? (
         <ErrorState message="No pudimos cargar tus cuentas." retry={refresh} />
       ) : accounts.length === 0 ? (
-        <div className="bg-card border border-dashed border-border rounded-2xl p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            No tienes cuentas todavía. Crea las cuentas y tarjetas iniciales para empezar.
-          </p>
-          <button
-            onClick={seedInitial}
-            disabled={busy}
-            className="mt-4 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
-          >
-            {busy ? 'Creando…' : 'Crear cuentas iniciales'}
-          </button>
-        </div>
+        <EmptyState
+          icon={Wallet}
+          title="Sin cuentas todavía"
+          message="Agrega tu primera cuenta para empezar a controlar tus finanzas."
+          ctaLabel="Agregar cuenta"
+          onAction={() => setShowAdd(true)}
+        />
       ) : (
         <div className="space-y-3">
           {accounts.map((a) => (

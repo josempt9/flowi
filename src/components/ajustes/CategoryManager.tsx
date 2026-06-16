@@ -7,7 +7,6 @@ import {
   ChevronUp,
   Eye,
   EyeOff,
-  Lock,
   Pencil,
   Plus,
   Trash2,
@@ -142,22 +141,17 @@ function CategoryRow({
         </button>
 
         {isGlobal ? (
-          <>
-            <Lock className="w-3.5 h-3.5 mx-0.5" />
-            <button onClick={onHide} aria-label={category.is_hidden ? 'Mostrar' : 'Ocultar'} className="p-1 hover:text-foreground">
-              {category.is_hidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </>
+          <button onClick={onHide} aria-label={category.is_hidden ? 'Mostrar' : 'Ocultar'} className="p-1 hover:text-foreground">
+            {category.is_hidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
         ) : (
-          <>
-            <button onClick={() => setEditing(true)} aria-label="Editar" className="p-1 hover:text-foreground">
-              <Pencil className="w-4 h-4" />
-            </button>
-            <button onClick={onRemove} aria-label="Eliminar" className="p-1 hover:text-red-500">
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </>
+          <button onClick={() => setEditing(true)} aria-label="Editar" className="p-1 hover:text-foreground">
+            <Pencil className="w-4 h-4" />
+          </button>
         )}
+        <button onClick={onRemove} aria-label="Eliminar" className="p-1 hover:text-red-500">
+          <Trash2 className="w-4 h-4" />
+        </button>
       </div>
     </div>
   )
