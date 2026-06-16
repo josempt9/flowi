@@ -53,6 +53,8 @@ export interface CreditCard {
   annual_fee: number
   cashback_rate: number
   cat: number | null
+  previous_balance: number
+  last_cut_date: string | null
   institution: string | null
   is_active: boolean
   created_at: string

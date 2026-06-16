@@ -25,6 +25,16 @@ export function paymentDayFromCut(cutDay: number, graceDays: number): number {
   return ((cutDay + graceDays - 1) % 31) + 1
 }
 
+/** Próxima ocurrencia de un día del mes como Date (o null). */
+export function nextMonthDayDate(day: number | null): Date | null {
+  if (!day) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  let target = new Date(today.getFullYear(), today.getMonth(), day)
+  if (target < today) target = new Date(today.getFullYear(), today.getMonth() + 1, day)
+  return target
+}
+
 /** Utilización de la tarjeta: saldo / límite (0 a 1). */
 export function cardUtilization(card: CreditCard): number {
   if (!card.credit_limit) return 0

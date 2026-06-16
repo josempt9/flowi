@@ -24,7 +24,7 @@ export function useCards() {
     const { data, error } = await supabase
       .from('credit_cards')
       .select(
-        'id, user_id, name, credit_limit, current_balance, cut_day, payment_day, grace_days, annual_fee, cashback_rate, cat, institution, is_active, created_at'
+        'id, user_id, name, credit_limit, current_balance, cut_day, payment_day, grace_days, annual_fee, cashback_rate, cat, previous_balance, last_cut_date, institution, is_active, created_at'
       )
       .eq('user_id', user.id)
       .eq('is_active', true)

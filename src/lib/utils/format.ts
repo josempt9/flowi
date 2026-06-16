@@ -37,6 +37,12 @@ export function formatRelative(date: string | Date): string {
   return formatDistanceToNow(new Date(date), { addSuffix: true, locale: es })
 }
 
+/** Fecha de hoy legible y capitalizada, p. ej. "Lunes 16 de junio". */
+export function formatToday(): string {
+  const s = format(new Date(), "EEEE d 'de' MMMM", { locale: es })
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
 /** Próxima ocurrencia de un día del mes como fecha legible, p. ej. "13 de julio 2026". */
 export function formatNextMonthDay(day: number): string {
   const today = new Date()

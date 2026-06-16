@@ -253,6 +253,8 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
   const [cat, setCat] = useState('')
   const [cashbackPct, setCashbackPct] = useState('')
   const [annualFee, setAnnualFee] = useState('')
+  const [prevBalance, setPrevBalance] = useState('')
+  const [lastCutDate, setLastCutDate] = useState('')
   const [institution, setInstitution] = useState('')
   const [busy, setBusy] = useState(false)
   const [searching, setSearching] = useState(false)
@@ -321,6 +323,8 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
       cat: cat ? parseFloat(cat) : null,
       cashback_rate: cashbackPct ? parseFloat(cashbackPct) / 100 : 0,
       annual_fee: annualFee ? parseFloat(annualFee) : 0,
+      previous_balance: prevBalance ? parseFloat(prevBalance) : 0,
+      last_cut_date: lastCutDate || null,
       institution: institution.trim() || null,
     })
     if (error) {
@@ -432,6 +436,23 @@ function AddCardForm({ onDone }: { onDone: () => void }) {
         placeholder="Institución (opcional)"
         className={inputClass}
       />
+      <CurrencyInput
+        value={parseFloat(prevBalance) || 0}
+        onChange={(n) => setPrevBalance(String(n))}
+        placeholder="Saldo ciclo anterior (2do corte)"
+        className={inputClass}
+      />
+      <div>
+        <label className="block text-xs text-muted-foreground mb-1">
+          Fecha del último corte (opcional)
+        </label>
+        <input
+          type="date"
+          value={lastCutDate}
+          onChange={(e) => setLastCutDate(e.target.value)}
+          className={inputClass}
+        />
+      </div>
       {error && <p className="text-red-500 text-sm">{error}</p>}
       <button
         onClick={submit}

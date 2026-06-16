@@ -117,3 +117,12 @@ create policy "own_recurring" on public.recurring_items
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 grant select, insert, update, delete on public.recurring_items to authenticated;
+
+-- ----------------------------------------------------------------------------
+-- Sprint D1 — Tesorería en la Home: saldo del ciclo anterior (2do corte) y
+-- fecha real del último corte por tarjeta.
+-- ----------------------------------------------------------------------------
+alter table public.credit_cards
+  add column if not exists previous_balance numeric(12,2) default 0;
+alter table public.credit_cards
+  add column if not exists last_cut_date date;
